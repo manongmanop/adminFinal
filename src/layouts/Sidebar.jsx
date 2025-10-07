@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, Dumbbell, Settings, Users, X } from "lucide-react";
+import { LayoutDashboard, Dumbbell, ListChecks, MessageSquare, Settings, X } from "lucide-react";
 import { Badge } from "../components/ui.jsx";
 
 const NavItem = ({ icon: Icon, label, active, onClick, badge }) => (
@@ -19,26 +19,23 @@ const NavItem = ({ icon: Icon, label, active, onClick, badge }) => (
 
 export default function Sidebar({ open, setOpen, active, setActive }) {
   const items = [
-    { key: "overview", icon: LayoutDashboard, label: "ภาพรวม", badge: null },
-    { key: "programs", icon: Dumbbell, label: "โปรแกรม", badge: "24" },
-    { key: "exercises", icon: Settings, label: "ท่าฝึก", badge: "132" },
-    { key: "users", icon: Users, label: "ผู้ใช้", badge: "420" },
-    { key: "settings", icon: Settings, label: "ตั้งค่า", badge: null },
+    { key: "overview", icon: LayoutDashboard, label: "ภาพรวม" },
+    { key: "programs", icon: Dumbbell, label: "โปรแกรมออกกำลังกาย", badge: "6" },
+    { key: "exercises", icon: ListChecks, label: "ท่าฝึกทั้งหมด", badge: "12" },
+    { key: "feedback", icon: MessageSquare, label: "ความคิดเห็นผู้ใช้", badge: "32" },
+    { key: "settings", icon: Settings, label: "ตั้งค่าระบบ" }
   ];
 
   return (
     <>
-      {/* Mobile Overlay */}
       {open && (
         <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden" onClick={() => setOpen(false)} />
       )}
-      
-      {/* Sidebar */}
+
       <div className={`fixed inset-y-0 left-0 z-50 w-80 transform bg-gray-900 transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
         open ? "translate-x-0" : "-translate-x-full"
       }`}>
         <div className="flex h-full flex-col">
-          {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-700">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
@@ -46,15 +43,14 @@ export default function Sidebar({ open, setOpen, active, setActive }) {
               </div>
               <div>
                 <h2 className="text-lg font-bold text-white">FitAdmin</h2>
-                <p className="text-xs text-gray-400">Dashboard</p>
+                <p className="text-xs text-gray-400">Control Center</p>
               </div>
             </div>
             <button className="text-gray-400 hover:text-white md:hidden" onClick={() => setOpen(false)}>
               <X size={20} />
             </button>
           </div>
-          
-          {/* Navigation */}
+
           <nav className="flex-1 p-4 space-y-2">
             {items.map((item) => (
               <NavItem
@@ -70,8 +66,7 @@ export default function Sidebar({ open, setOpen, active, setActive }) {
               />
             ))}
           </nav>
-          
-          {/* Footer */}
+
           <div className="p-4 border-t border-gray-700">
             <div className="text-xs text-gray-500 text-center">
               © 2024 FitAdmin v1.0
