@@ -4,13 +4,17 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "node scripts/run-vite.js",
+    "build": "node scripts/run-vite.js build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "node scripts/run-vite.js preview",
+    "api": "node server/index.js"
   },
   "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
     "lucide-react": "^0.544.0",
+    "mongodb": "^6.10.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.1"
