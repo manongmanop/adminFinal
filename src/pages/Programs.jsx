@@ -14,9 +14,19 @@ import {
   Dumbbell,
   Layers,
 } from "lucide-react";
-import { createEmptyProgram, getInitialPrograms } from "../data/fitnessData.js";
 
-const initialProgramsData = getInitialPrograms();
+import { fetchPrograms } from "../api/client.js";
+
+const createEmptyProgram = () => ({
+  id: `program-${Date.now()}`,
+  name: "โปรแกรมใหม่",
+  description: "อธิบายรายละเอียดโปรแกรม",
+  duration: "",
+  caloriesBurned: 0,
+  image: "",
+  category: "",
+  workoutList: [],
+});
 
 const emptyWorkoutForm = () => ({
   id: null,
@@ -31,18 +41,59 @@ const emptyWorkoutForm = () => ({
 });
 
 export default function Programs() {
-  const [programs, setPrograms] = useState(initialProgramsData);
+  const [programs, setPrograms] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedProgramId, setSelectedProgramId] = useState(initialProgramsData[0]?.id ?? null);
-  const [programForm, setProgramForm] = useState(initialProgramsData[0] ?? null);
+  const [selectedProgramId, setSelectedProgramId] = useState(null);
+  const [programForm, setProgramForm] = useState(null);
   const [programErrors, setProgramErrors] = useState({});
   const [workoutForm, setWorkoutForm] = useState(emptyWorkoutForm());
   const [workoutErrors, setWorkoutErrors] = useState({});
   const [editingWorkoutId, setEditingWorkoutId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    fetchPrograms()
+      .then((data) => {
+        if (cancelled) return;
+        const normalized = Array.isArray(data)
+          ? data.map((program) => ({
+              ...program,
+              workoutList: (program.workoutList ?? []).map((workout) => ({
+                ...workout,
+                muscles: Array.isArray(workout.muscles) ? [...workout.muscles] : [],
+              })),
+            }))
+          : [];
+
+        setPrograms(normalized);
+        setSelectedProgramId(normalized[0]?.id ?? null);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error("ไม่สามารถดึงข้อมูลโปรแกรม", err);
+        setError("ไม่สามารถโหลดข้อมูลโปรแกรมได้ กรุณาลองใหม่อีกครั้ง");
+        setPrograms([]);
+        setSelectedProgramId(null);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredPrograms = useMemo(() => {
+    const term = searchTerm.toLowerCase();
     return programs.filter((program) => {
-      const term = searchTerm.toLowerCase();
       const programMatch = program.name.toLowerCase().includes(term);
       const workoutMatch = program.workoutList.some((workout) =>
         workout.name.toLowerCase().includes(term)
@@ -210,6 +261,13 @@ export default function Programs() {
     setWorkoutForm((prev) => ({ ...prev, [field]: `/uploads/${fileName}` }));
   };
 
+  const averageWorkouts = programs.length
+    ? (
+        programs.reduce((sum, program) => sum + program.workoutList.length, 0) /
+        programs.length
+      ).toFixed(1)
+    : 0;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 rounded-2xl border border-gray-700 bg-gradient-to-br from-gray-900 to-gray-800 p-6 md:flex-row md:items-center md:justify-between">
@@ -219,10 +277,10 @@ export default function Programs() {
           </div>
           <div>
             <h1 className="text-2xl font-semibold text-white">จัดการโปรแกรมออกกำลังกาย</h1>
-            <p className="text-sm text-gray-400">สร้าง ปรับแต่ง และจัดการชุดท่าออกกำลังกายตามความต้องการของผู้ใช้</p>
+            <p className="text-sm text-gray-400">สร้าง ปรับแต่ง และจัดการชุดท่าฝึกออกกำลังกายในระบบ</p>
           </div>
         </div>
-        <Button onClick={handleAddProgram} className="w-full md:w-auto">
+        <Button onClick={handleAddProgram} className="w-full md:w-auto" disabled={loading}>
           <Plus size={16} /> เพิ่มโปรแกรมใหม่
         </Button>
       </div>
@@ -241,20 +299,16 @@ export default function Programs() {
             <span>ชุดท่าเฉลี่ยต่อโปรแกรม</span>
             <Layers size={16} className="text-sky-400" />
           </div>
-          <div className="mt-3 text-2xl font-semibold text-white">
-            {programs.length === 0
-              ? 0
-              : (programs.reduce((sum, program) => sum + program.workoutList.length, 0) / programs.length).toFixed(1)}
-          </div>
+          <div className="mt-3 text-2xl font-semibold text-white">{averageWorkouts}</div>
           <p className="text-xs text-gray-500">จำนวนท่าฝึกเฉลี่ยในแต่ละโปรแกรม</p>
         </Card>
         <Card className="p-6">
           <div className="flex items-center justify-between text-sm text-gray-400">
-            <span>ค้นหาทั้งหมด</span>
+            <span>ผลลัพธ์การค้นหา</span>
             <Search size={16} className="text-purple-400" />
           </div>
           <div className="mt-3 text-2xl font-semibold text-white">{filteredPrograms.length}</div>
-          <p className="text-xs text-gray-500">ผลลัพธ์ที่ตรงกับการค้นหา</p>
+          <p className="text-xs text-gray-500">โปรแกรมที่ตรงกับคำค้นหา</p>
         </Card>
       </div>
 
@@ -271,6 +325,7 @@ export default function Programs() {
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="ค้นหาตามชื่อโปรแกรมหรือท่าฝึกภายในโปรแกรม"
               className="pl-10"
+              disabled={loading || !!error}
             />
           </div>
           <p className="mt-2 text-xs text-gray-500">
@@ -279,132 +334,142 @@ export default function Programs() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[20rem_1fr]">
-        <div className="space-y-4">
-          {filteredPrograms.map((program) => (
-            <Card
-              key={program.id}
-              className={`cursor-pointer border ${
-                program.id === selectedProgramId ? "border-emerald-500" : "border-gray-700"
-              } bg-gray-900/70 p-5 transition hover:border-emerald-400/70`}
-              onClick={() => setSelectedProgramId(program.id)}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold text-white">{program.name}</h3>
-                  <p className="text-xs text-gray-400">{program.description}</p>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
-                    <span className="flex items-center gap-1">
-                      <Calendar size={14} /> {program.duration || "-"}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Flame size={14} /> {program.caloriesBurned} แคลอรี
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Target size={14} /> {program.category || "ไม่ระบุ"}
-                    </span>
+      {loading ? (
+        <Card className="p-6 text-center text-gray-400">กำลังโหลดข้อมูลโปรแกรม...</Card>
+      ) : error ? (
+        <Card className="space-y-4 border border-rose-500/40 bg-rose-500/10 p-6 text-center text-rose-100">
+          <p>{error}</p>
+          <Button variant="secondary" onClick={() => window.location.reload()}>
+            ลองใหม่อีกครั้ง
+          </Button>
+        </Card>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-[20rem_1fr]">
+          <div className="space-y-4">
+            {filteredPrograms.map((program) => (
+              <Card
+                key={program.id}
+                className={`cursor-pointer border ${
+                  program.id === selectedProgramId ? "border-emerald-500" : "border-gray-700"
+                } bg-gray-900/70 p-5 transition hover:border-emerald-400/70`}
+                onClick={() => setSelectedProgramId(program.id)}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold text-white">{program.name}</h3>
+                    <p className="text-xs text-gray-400">{program.description}</p>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
+                      <span className="flex items-center gap-1">
+                        <Calendar size={14} /> {program.duration || "-"}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Flame size={14} /> {program.caloriesBurned} แคลอรี
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Target size={14} /> {program.category || "ไม่ระบุ"}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-rose-300 hover:text-rose-200"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteProgram(program.id);
-                  }}
-                >
-                  <Trash2 size={16} />
-                </Button>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {program.workoutList.map((workout) => (
-                  <Badge key={workout.id} className="bg-gray-800 text-gray-300">
-                    {workout.name}
-                  </Badge>
-                ))}
-                {program.workoutList.length === 0 && (
-                  <span className="text-xs text-gray-500">ยังไม่มีชุดโปรแกรม</span>
-                )}
-              </div>
-            </Card>
-          ))}
-          {filteredPrograms.length === 0 && (
-            <Card className="p-6 text-center text-gray-400">ไม่พบโปรแกรมที่ตรงกับคำค้นหา</Card>
-          )}
-        </div>
-
-        <div className="space-y-6">
-          {programForm ? (
-            <>
-              <Card className="border border-gray-700 bg-gray-900/70 p-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-white">รายละเอียดโปรแกรม</h2>
-                  <Button onClick={handleSaveProgram}>
-                    <Save size={16} /> บันทึกข้อมูล
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-rose-300 hover:text-rose-200"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteProgram(program.id);
+                    }}
+                  >
+                    <Trash2 size={16} />
                   </Button>
                 </div>
-                <div className="mt-6 grid gap-6">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="program-name">
-                      ชื่อโปรแกรม
-                    </label>
-                    <Input
-                      id="program-name"
-                      value={programForm.name}
-                      onChange={(e) => handleProgramFieldChange("name", e.target.value)}
-                      placeholder="เช่น Full Body Workout"
-                    />
-                    {programErrors.name && (
-                      <p className="mt-1 text-xs text-rose-400">{programErrors.name}</p>
-                    )}
-                  </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {program.workoutList.map((workout) => (
+                    <Badge key={workout.id} className="bg-gray-800 text-gray-300">
+                      {workout.name}
+                    </Badge>
+                  ))}
+                  {program.workoutList.length === 0 && (
+                    <span className="text-xs text-gray-500">ยังไม่มีชุดโปรแกรม</span>
+                  )}
+                </div>
+              </Card>
+            ))}
+            {filteredPrograms.length === 0 && (
+              <Card className="p-6 text-center text-gray-400">ไม่พบโปรแกรมที่ตรงกับคำค้นหา</Card>
+            )}
+          </div>
 
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="program-description">
-                      รายละเอียด (คำอธิบาย)
-                    </label>
-                    <Textarea
-                      id="program-description"
-                      rows={4}
-                      value={programForm.description}
-                      onChange={(e) => handleProgramFieldChange("description", e.target.value)}
-                      placeholder="อธิบายเป้าหมายและลักษณะของโปรแกรม"
-                    />
-                    {programErrors.description && (
-                      <p className="mt-1 text-xs text-rose-400">{programErrors.description}</p>
-                    )}
+          <div className="space-y-6">
+            {programForm ? (
+              <>
+                <Card className="border border-gray-700 bg-gray-900/70 p-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold text-white">รายละเอียดโปรแกรม</h2>
+                    <Button onClick={handleSaveProgram}>
+                      <Save size={16} /> บันทึกข้อมูล
+                    </Button>
                   </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="mt-6 grid gap-6">
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="program-duration">
-                        ระยะเวลาโปรแกรม
+                      <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="program-name">
+                        ชื่อโปรแกรม
                       </label>
                       <Input
-                        id="program-duration"
-                        value={programForm.duration}
-                        onChange={(e) => handleProgramFieldChange("duration", e.target.value)}
-                        placeholder="เช่น 10:00"
+                        id="program-name"
+                        value={programForm.name}
+                        onChange={(e) => handleProgramFieldChange("name", e.target.value)}
+                        placeholder="เช่น Full Body Workout"
                       />
-                      {programErrors.duration && (
-                        <p className="mt-1 text-xs text-rose-400">{programErrors.duration}</p>
+                      {programErrors.name && (
+                        <p className="mt-1 text-xs text-rose-400">{programErrors.name}</p>
                       )}
                     </div>
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="program-calories">
-                        พลังงานที่เผาผลาญ (แคลอรี)
-                      </label>
-                      <Input
-                        id="program-calories"
-                        type="number"
-                        value={programForm.caloriesBurned}
-                        onChange={(e) => handleProgramFieldChange("caloriesBurned", e.target.value)}
-                      />
-                    </div>
-                  </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="program-description">
+                        รายละเอียด (คำอธิบาย)
+                      </label>
+                      <Textarea
+                        id="program-description"
+                        rows={4}
+                        value={programForm.description}
+                        onChange={(e) => handleProgramFieldChange("description", e.target.value)}
+                        placeholder="อธิบายเป้าหมายและลักษณะของโปรแกรม"
+                      />
+                      {programErrors.description && (
+                        <p className="mt-1 text-xs text-rose-400">{programErrors.description}</p>
+                      )}
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="program-duration">
+                          ระยะเวลาโปรแกรม
+                        </label>
+                        <Input
+                          id="program-duration"
+                          value={programForm.duration}
+                          onChange={(e) => handleProgramFieldChange("duration", e.target.value)}
+                          placeholder="เช่น 10:00"
+                        />
+                        {programErrors.duration && (
+                          <p className="mt-1 text-xs text-rose-400">{programErrors.duration}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="program-calories">
+                          พลังงานที่เผาผลาญ (แคลอรี)
+                        </label>
+                        <Input
+                          id="program-calories"
+                          type="number"
+                          value={programForm.caloriesBurned}
+                          onChange={(e) => handleProgramFieldChange("caloriesBurned", e.target.value)}
+                          placeholder="เช่น 200"
+                        />
+                      </div>
+                    </div>
+
                     <div>
                       <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="program-category">
                         หมวดหมู่โปรแกรม
@@ -419,95 +484,67 @@ export default function Programs() {
                         <p className="mt-1 text-xs text-rose-400">{programErrors.category}</p>
                       )}
                     </div>
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="program-image">
-                        รูปภาพปกโปรแกรม (ลิงก์หรือชื่อไฟล์)
-                      </label>
-                      <Input
-                        id="program-image"
-                        value={programForm.image}
-                        onChange={(e) => handleProgramFieldChange("image", e.target.value)}
-                        placeholder="/uploads/your-image.webp"
-                      />
-                    </div>
                   </div>
-                </div>
-              </Card>
+                </Card>
 
-              <Card className="border border-gray-700 bg-gray-900/70 p-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-white">ชุดโปรแกรมและท่าฝึก</h2>
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      setEditingWorkoutId(null);
-                      setWorkoutForm(emptyWorkoutForm());
-                      setWorkoutErrors({});
-                    }}
-                  >
-                    <Plus size={16} /> เพิ่มชุดโปรแกรม
-                  </Button>
-                </div>
+                <Card className="border border-gray-700 bg-gray-900/70 p-6">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <h2 className="text-xl font-semibold text-white">ชุดท่าฝึกในโปรแกรม</h2>
+                      <p className="text-sm text-gray-400">เพิ่มหรือแก้ไขรายละเอียดของแต่ละชุดท่าฝึก</p>
+                    </div>
+                    <Button onClick={() => setWorkoutForm(emptyWorkoutForm())} variant="secondary">
+                      รีเซ็ตฟอร์ม
+                    </Button>
+                  </div>
 
-                <div className="mt-6 space-y-4">
-                  {programForm.workoutList.map((workout) => (
-                    <Card key={workout.id} className="border border-gray-700/80 bg-gray-900/80 p-5">
-                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap items-center gap-2">
+                  <div className="mt-6 grid gap-4 md:grid-cols-2">
+                    {programForm.workoutList.map((workout) => (
+                      <Card key={workout.id} className="border border-gray-700 bg-gray-900/70 p-5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
                             <h3 className="text-lg font-semibold text-white">{workout.name}</h3>
-                            <Badge variant={workout.type === "reps" ? "success" : "blue"}>
-                              {workout.type === "reps" ? "จำนวนครั้ง" : "เวลา"}
-                            </Badge>
+                            <p className="text-xs text-gray-400">{workout.description}</p>
+                            <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-400">
+                              {workout.muscles.map((muscle) => (
+                                <span key={muscle} className="rounded-full bg-gray-800 px-3 py-1">
+                                  #{muscle}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-300">{workout.description}</p>
-                          <div className="flex flex-wrap gap-2 text-xs text-gray-400">
-                            {workout.muscles.map((muscle) => (
-                              <span key={muscle} className="rounded-full bg-gray-800 px-3 py-1">
-                                #{muscle}
-                              </span>
-                            ))}
-                          </div>
-                          <div className="text-xs text-gray-400">
-                            {workout.type === "reps" && (
-                              <span className="mr-4">จำนวนครั้ง: {workout.value || "-"}</span>
-                            )}
-                            {workout.type === "time" && (
-                              <span className="mr-4">เวลา: {workout.duration || 0} วินาที</span>
-                            )}
-                            {workout.video && <span className="mr-4">วิดีโอ: {workout.video}</span>}
-                            {workout.image && <span>รูปภาพ: {workout.image}</span>}
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => handleEditWorkout(workout)}>
+                              <Edit2 size={16} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-rose-300 hover:text-rose-200"
+                              onClick={() => handleDeleteWorkout(workout.id)}
+                            >
+                              <Trash2 size={16} />
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex gap-2 self-start">
-                          <Button variant="ghost" size="sm" onClick={() => handleEditWorkout(workout)}>
-                            <Edit2 size={16} /> แก้ไข
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-rose-300 hover:text-rose-200"
-                            onClick={() => handleDeleteWorkout(workout.id)}
-                          >
-                            <Trash2 size={16} /> ลบ
-                          </Button>
+                        <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-400">
+                          <Badge variant={workout.type === "reps" ? "success" : "blue"}>
+                            {workout.type === "reps" ? `จำนวนครั้ง ${workout.value}` : `ระยะเวลา ${workout.duration} วินาที`}
+                          </Badge>
                         </div>
-                      </div>
-                    </Card>
-                  ))}
+                      </Card>
+                    ))}
+                    {programForm.workoutList.length === 0 && (
+                      <Card className="p-6 text-center text-gray-400">ยังไม่มีชุดท่าฝึกสำหรับโปรแกรมนี้</Card>
+                    )}
+                  </div>
+                </Card>
 
-                  {programForm.workoutList.length === 0 && (
-                    <Card className="border border-dashed border-gray-600 bg-gray-900/50 p-8 text-center text-gray-400">
-                      ยังไม่มีชุดโปรแกรมในรายการนี้ กดปุ่ม "เพิ่มชุดโปรแกรม" เพื่อเริ่มต้น
-                    </Card>
-                  )}
-                </div>
+                <Card className="border border-gray-700 bg-gray-900/70 p-6">
+                  <h2 className="text-xl font-semibold text-white">เพิ่ม / แก้ไขชุดโปรแกรม</h2>
+                  <p className="text-sm text-gray-400">กรอกข้อมูลรายละเอียดและกำหนดกล้ามเนื้อที่เกี่ยวข้อง</p>
 
-                <div className="mt-8 rounded-2xl border border-gray-700 bg-gray-900/80 p-6">
-                  <h3 className="text-lg font-semibold text-white">
-                    {editingWorkoutId ? "แก้ไขชุดโปรแกรม" : "เพิ่มชุดโปรแกรมใหม่"}
-                  </h3>
-                  <div className="mt-4 grid gap-4">
+                  <div className="mt-6 grid gap-6">
                     <div>
                       <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="workout-name">
                         ชื่อชุดโปรแกรม
@@ -516,7 +553,7 @@ export default function Programs() {
                         id="workout-name"
                         value={workoutForm.name}
                         onChange={(e) => handleWorkoutFieldChange("name", e.target.value)}
-                        placeholder="เช่น Plank Challenge"
+                        placeholder="เช่น Warm-up Session"
                       />
                       {workoutErrors.name && (
                         <p className="mt-1 text-xs text-rose-400">{workoutErrors.name}</p>
@@ -532,7 +569,7 @@ export default function Programs() {
                         rows={3}
                         value={workoutForm.description}
                         onChange={(e) => handleWorkoutFieldChange("description", e.target.value)}
-                        placeholder="อธิบายลักษณะการฝึกและทิปส์สำคัญ"
+                        placeholder="อธิบายรายละเอียดและเทคนิคของชุดโปรแกรม"
                       />
                       {workoutErrors.description && (
                         <p className="mt-1 text-xs text-rose-400">{workoutErrors.description}</p>
@@ -541,13 +578,13 @@ export default function Programs() {
 
                     <div>
                       <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="workout-muscles">
-                        กล้ามเนื้อที่ได้รับ (คั่นด้วยจุลภาค)
+                        กล้ามเนื้อที่เกี่ยวข้อง
                       </label>
                       <Input
                         id="workout-muscles"
                         value={workoutForm.musclesText}
                         onChange={(e) => handleWorkoutFieldChange("musclesText", e.target.value)}
-                        placeholder="เช่น core, back"
+                        placeholder="ระบุด้วยเครื่องหมายจุลภาค เช่น chest, arms"
                       />
                       {workoutErrors.muscles && (
                         <p className="mt-1 text-xs text-rose-400">{workoutErrors.muscles}</p>
@@ -563,22 +600,24 @@ export default function Programs() {
                           id="workout-type"
                           value={workoutForm.type}
                           onChange={(e) => handleWorkoutFieldChange("type", e.target.value)}
-                          className="w-full rounded-xl bg-gray-800 border border-gray-600 px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                          className="w-full rounded-xl border border-gray-600 bg-gray-800 px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                         >
                           <option value="reps">จำนวนครั้ง</option>
-                          <option value="time">เวลา (วินาที)</option>
+                          <option value="time">ระยะเวลา</option>
                         </select>
                       </div>
+
                       {workoutForm.type === "reps" ? (
                         <div>
                           <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="workout-value">
-                            จำนวนครั้งต่อเซ็ต
+                            จำนวนครั้ง
                           </label>
                           <Input
                             id="workout-value"
                             type="number"
                             value={workoutForm.value}
                             onChange={(e) => handleWorkoutFieldChange("value", e.target.value)}
+                            placeholder="เช่น 12"
                           />
                           {workoutErrors.value && (
                             <p className="mt-1 text-xs text-rose-400">{workoutErrors.value}</p>
@@ -587,13 +626,14 @@ export default function Programs() {
                       ) : (
                         <div>
                           <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="workout-duration">
-                            เวลา (วินาที)
+                            ระยะเวลา (วินาที)
                           </label>
                           <Input
                             id="workout-duration"
                             type="number"
                             value={workoutForm.duration}
                             onChange={(e) => handleWorkoutFieldChange("duration", e.target.value)}
+                            placeholder="เช่น 60"
                           />
                           {workoutErrors.duration && (
                             <p className="mt-1 text-xs text-rose-400">{workoutErrors.duration}</p>
@@ -604,81 +644,64 @@ export default function Programs() {
 
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
-                        <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="workout-video">
-                          วิดีโอฝึกสอน
-                        </label>
-                        <div className="flex items-center gap-3">
-                          <Input
-                            id="workout-video"
-                            value={workoutForm.video}
-                            onChange={(e) => handleWorkoutFieldChange("video", e.target.value)}
-                            placeholder="/uploads/video.mp4"
-                          />
-                          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-gray-600 px-3 py-2 text-xs text-gray-300 hover:border-emerald-500">
-                            <Upload size={14} />
-                            <span>อัปโหลด</span>
-                            <input
-                              type="file"
-                              accept="video/*"
-                              className="hidden"
-                              onChange={(e) => handleUpload("video", e.target.files)}
-                            />
-                          </label>
-                        </div>
-                      </div>
-                      <div>
                         <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="workout-image">
-                          รูปภาพประกอบ
+                          อัปโหลดรูปภาพ
                         </label>
                         <div className="flex items-center gap-3">
-                          <Input
-                            id="workout-image"
-                            value={workoutForm.image}
-                            onChange={(e) => handleWorkoutFieldChange("image", e.target.value)}
-                            placeholder="/uploads/image.webp"
-                          />
-                          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-gray-600 px-3 py-2 text-xs text-gray-300 hover:border-emerald-500">
-                            <Upload size={14} />
-                            <span>อัปโหลด</span>
+                          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-gray-600 bg-gray-800 px-4 py-2 text-sm text-gray-200 hover:border-emerald-500">
+                            <Upload size={16} /> เลือกรูปภาพ
                             <input
+                              id="workout-image"
                               type="file"
                               accept="image/*"
                               className="hidden"
                               onChange={(e) => handleUpload("image", e.target.files)}
                             />
                           </label>
+                          {workoutForm.image && (
+                            <span className="text-xs text-gray-400">{workoutForm.image}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="workout-video">
+                          อัปโหลดวิดีโอสอน
+                        </label>
+                        <div className="flex items-center gap-3">
+                          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-gray-600 bg-gray-800 px-4 py-2 text-sm text-gray-200 hover:border-emerald-500">
+                            <Upload size={16} /> เลือกวิดีโอ
+                            <input
+                              id="workout-video"
+                              type="file"
+                              accept="video/*"
+                              className="hidden"
+                              onChange={(e) => handleUpload("video", e.target.files)}
+                            />
+                          </label>
+                          {workoutForm.video && (
+                            <span className="text-xs text-gray-400">{workoutForm.video}</span>
+                          )}
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex justify-end gap-2">
-                      {editingWorkoutId && (
-                        <Button
-                          variant="ghost"
-                          onClick={() => {
-                            setEditingWorkoutId(null);
-                            setWorkoutForm(emptyWorkoutForm());
-                            setWorkoutErrors({});
-                          }}
-                        >
-                          ยกเลิก
-                        </Button>
-                      )}
+                    <div className="flex justify-end gap-3">
+                      <Button variant="secondary" onClick={() => setWorkoutForm(emptyWorkoutForm())}>
+                        รีเซ็ต
+                      </Button>
                       <Button onClick={handleSaveWorkout}>
-                        <Save size={16} /> {editingWorkoutId ? "บันทึกการแก้ไข" : "เพิ่มชุดโปรแกรม"}
+                        <Save size={16} /> {editingWorkoutId ? "อัปเดตชุดโปรแกรม" : "เพิ่มชุดโปรแกรม"}
                       </Button>
                     </div>
                   </div>
-                </div>
-              </Card>
-            </>
-          ) : (
-            <Card className="p-10 text-center text-gray-400">
-              เลือกโปรแกรมจากรายการด้านซ้ายเพื่อดูรายละเอียดและแก้ไขข้อมูล
-            </Card>
-          )}
+                </Card>
+              </>
+            ) : (
+              <Card className="p-6 text-center text-gray-400">เลือกโปรแกรมเพื่อดูรายละเอียด</Card>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

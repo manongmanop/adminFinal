@@ -1,64 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Card, Badge, Input, Button } from "../components/ui.jsx";
 import { MessageSquare, Filter, Star, ThumbsUp, Flag } from "lucide-react";
 
-const initialFeedback = [
-  {
-    id: "f1",
-    targetType: "program",
-    targetName: "Full Body Workout",
-    rating: 5,
-    comment: "โปรแกรมครบทุกส่วน รู้สึกได้ใช้กล้ามเนื้อทั้งตัว",
-    user: "คุณวีรพล",
-    createdAt: "2024-02-18",
-    likes: 18,
-    tags: ["cardio", "fat-burn"],
-  },
-  {
-    id: "f2",
-    targetType: "exercise",
-    targetName: "Dumbbell Curl",
-    rating: 4,
-    comment: "ท่าสอนเข้าใจง่าย แต่วิดีโอโหลดช้านิดหน่อย",
-    user: "Coach A",
-    createdAt: "2024-02-16",
-    likes: 11,
-    tags: ["arms", "strength"],
-  },
-  {
-    id: "f3",
-    targetType: "program",
-    targetName: "Core Stability",
-    rating: 5,
-    comment: "ชอบที่มีการไล่ระดับความยาก ทำตามได้แม้เป็นมือใหม่",
-    user: "คุณจิราพร",
-    createdAt: "2024-02-14",
-    likes: 22,
-    tags: ["core", "beginner"],
-  },
-  {
-    id: "f4",
-    targetType: "exercise",
-    targetName: "Plank",
-    rating: 3,
-    comment: "อยากได้เทคนิคเพิ่มเติมสำหรับคนที่ปวดหลัง",
-    user: "NinjaFit",
-    createdAt: "2024-02-12",
-    likes: 4,
-    tags: ["core", "tips"],
-  },
-  {
-    id: "f5",
-    targetType: "program",
-    targetName: "Lower Body Strength",
-    rating: 4,
-    comment: "ดีมากแต่ขอเพิ่มการยืดเหยียดก่อนเริ่ม",
-    user: "คุณภานุ",
-    createdAt: "2024-02-10",
-    likes: 9,
-    tags: ["legs", "mobility"],
-  },
-];
+import { fetchFeedback } from "../api/client.js";
 
 const filterOptions = [
   { value: "all", label: "ทั้งหมด" },
@@ -67,11 +11,47 @@ const filterOptions = [
 ];
 
 export default function Feedback() {
+  const [feedback, setFeedback] = useState([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    fetchFeedback()
+      .then((data) => {
+        if (cancelled) return;
+        const normalized = Array.isArray(data)
+          ? data.map((item) => ({
+              ...item,
+              tags: Array.isArray(item.tags) ? item.tags : [],
+            }))
+          : [];
+        setFeedback(normalized);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error("ไม่สามารถดึงข้อมูลความคิดเห็น", err);
+        setError("ไม่สามารถโหลดความคิดเห็นได้ กรุณาลองใหม่อีกครั้ง");
+        setFeedback([]);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredFeedback = useMemo(() => {
-    return initialFeedback.filter((item) => {
+    return feedback.filter((item) => {
       const matchesType = filter === "all" || item.targetType === filter;
       const matchesQuery =
         item.targetName.toLowerCase().includes(query.toLowerCase()) ||
@@ -79,14 +59,14 @@ export default function Feedback() {
         item.tags.some((tag) => tag.toLowerCase().includes(query.toLowerCase()));
       return matchesType && matchesQuery;
     });
-  }, [query, filter]);
+  }, [feedback, filter, query]);
 
   const stats = useMemo(() => {
     const total = filteredFeedback.length;
     const avg =
       total === 0
         ? 0
-        : filteredFeedback.reduce((sum, item) => sum + item.rating, 0) / total;
+        : filteredFeedback.reduce((sum, item) => sum + (item.rating ?? 0), 0) / total;
     const programCount = filteredFeedback.filter((item) => item.targetType === "program").length;
     const exerciseCount = filteredFeedback.filter((item) => item.targetType === "exercise").length;
     return { total, avg: avg.toFixed(1), programCount, exerciseCount };
@@ -120,6 +100,7 @@ export default function Feedback() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="ค้นหาจากชื่อโปรแกรม ท่าฝึก หรือคำแนะนำ..."
+            disabled={loading || !!error}
           />
         </div>
         <div className="w-full lg:w-56">
@@ -133,6 +114,7 @@ export default function Feedback() {
               className="w-full rounded-xl bg-gray-800 border border-gray-600 px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
+              disabled={loading || !!error}
             >
               {filterOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -171,51 +153,68 @@ export default function Feedback() {
         </Card>
       </div>
 
-      <div className="space-y-4">
-        {filteredFeedback.map((item) => (
-          <Card key={item.id} className="border-gray-700/80 bg-gray-900/70 p-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-center gap-3">
-                  <Badge variant={item.targetType === "program" ? "success" : "blue"}>
-                    {item.targetType === "program" ? "โปรแกรม" : "ท่าฝึก"}
-                  </Badge>
-                  <h3 className="text-lg font-semibold text-white">{item.targetName}</h3>
-                  <div className="flex items-center gap-1 text-yellow-400">
-                    {Array.from({ length: 5 }).map((_, index) => (
-                      <Star key={index} size={16} fill={index < item.rating ? "currentColor" : "none"} strokeWidth={1.5} />
+      {loading ? (
+        <Card className="p-6 text-center text-gray-400">กำลังโหลดความคิดเห็น...</Card>
+      ) : error ? (
+        <Card className="space-y-4 border border-rose-500/40 bg-rose-500/10 p-6 text-center text-rose-100">
+          <p>{error}</p>
+          <Button variant="secondary" onClick={() => window.location.reload()}>
+            ลองใหม่อีกครั้ง
+          </Button>
+        </Card>
+      ) : feedback.length === 0 ? (
+        <Card className="p-6 text-center text-gray-400">ยังไม่มีความคิดเห็นจากผู้ใช้</Card>
+      ) : (
+        <div className="space-y-4">
+          {filteredFeedback.map((item) => (
+            <Card key={item.id} className="border-gray-700/80 bg-gray-900/70 p-6">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Badge variant={item.targetType === "program" ? "success" : "blue"}>
+                      {item.targetType === "program" ? "โปรแกรม" : "ท่าฝึก"}
+                    </Badge>
+                    <h3 className="text-lg font-semibold text-white">{item.targetName}</h3>
+                    <div className="flex items-center gap-1 text-yellow-400">
+                      {Array.from({ length: 5 }).map((_, index) => (
+                        <Star
+                          key={index}
+                          size={16}
+                          fill={index < (item.rating ?? 0) ? "currentColor" : "none"}
+                          strokeWidth={1.5}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-300">{item.comment}</p>
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
+                    <span>โดย {item.user}</span>
+                    <span>•</span>
+                    <span>{new Date(item.createdAt).toLocaleDateString("th-TH")}</span>
+                    {item.tags.map((tag) => (
+                      <span key={tag} className="rounded-full bg-gray-800 px-3 py-1 text-xs text-gray-300">
+                        #{tag}
+                      </span>
                     ))}
                   </div>
                 </div>
-                <p className="text-sm text-gray-300">{item.comment}</p>
-                <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
-                  <span>โดย {item.user}</span>
-                  <span>•</span>
-                  <span>{new Date(item.createdAt).toLocaleDateString("th-TH")}</span>
-                  {item.tags.map((tag) => (
-                    <span key={tag} className="rounded-full bg-gray-800 px-3 py-1 text-xs text-gray-300">
-                      #{tag}
-                    </span>
-                  ))}
+                <div className="flex items-center gap-3 text-sm text-gray-400">
+                  <div className="flex items-center gap-1 text-emerald-400">
+                    <ThumbsUp size={16} /> {item.likes ?? 0}
+                  </div>
+                  <Button variant="ghost" size="sm" className="text-rose-300 hover:text-rose-200">
+                    <Flag size={16} /> รายงาน
+                  </Button>
                 </div>
               </div>
-              <div className="flex items-center gap-2 self-start">
-                <Button variant="ghost" size="sm" className="text-emerald-300 hover:text-emerald-200">
-                  <ThumbsUp size={16} /> {item.likes}
-                </Button>
-                <Button variant="ghost" size="sm" className="text-rose-300 hover:text-rose-200">
-                  <Flag size={16} /> แจ้งเตือน
-                </Button>
-              </div>
-            </div>
-          </Card>
-        ))}
-        {filteredFeedback.length === 0 && (
-          <Card className="p-10 text-center text-gray-400">
-            ไม่พบความคิดเห็นที่ตรงกับเงื่อนไขการค้นหา
-          </Card>
-        )}
-      </div>
+            </Card>
+          ))}
+
+          {filteredFeedback.length === 0 && (
+            <Card className="p-6 text-center text-gray-400">ไม่พบความคิดเห็นที่ตรงกับการค้นหา</Card>
+          )}
+        </div>
+      )}
     </div>
   );
 }

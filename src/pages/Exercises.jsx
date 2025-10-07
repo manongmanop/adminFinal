@@ -1,4 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Card, Button, Input, Badge } from "../components/ui.jsx";
+import { Dumbbell, Search, Filter, Plus, Flame, Clock, CheckCircle2 } from "lucide-react";
+
+import { fetchExercises } from "../api/client.js";
+
 import { Card, Button, Input, Textarea, Badge } from "../components/ui.jsx";
 import { exercisesData } from "../data/fitnessData.js";
 import { Dumbbell, Search, Filter, Plus, Flame, Clock, CheckCircle2 } from "lucide-react";
@@ -17,6 +22,52 @@ const muscleOptions = [
 ];
 
 export default function Exercises() {
+  const [exercises, setExercises] = useState([]);
+  const [query, setQuery] = useState("");
+  const [muscleFilter, setMuscleFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [selectedExerciseId, setSelectedExerciseId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    fetchExercises()
+      .then((data) => {
+        if (cancelled) return;
+        const normalized = Array.isArray(data)
+          ? data.map((exercise) => ({
+              ...exercise,
+              muscles: Array.isArray(exercise.muscles) ? exercise.muscles : [],
+            }))
+          : [];
+        setExercises(normalized);
+        setSelectedExerciseId(normalized[0]?.id ?? null);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error("ไม่สามารถดึงข้อมูลท่าฝึก", err);
+        setError("ไม่สามารถโหลดข้อมูลท่าฝึกได้ กรุณาลองใหม่อีกครั้ง");
+        setExercises([]);
+        setSelectedExerciseId(null);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const filteredExercises = useMemo(() => {
+    const term = query.toLowerCase();
+    return exercises.filter((exercise) => {
   const [query, setQuery] = useState("");
   const [muscleFilter, setMuscleFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -30,6 +81,12 @@ export default function Exercises() {
         exercise.description.toLowerCase().includes(term) ||
         exercise.muscles.some((muscle) => muscle.toLowerCase().includes(term));
       const matchesMuscle =
+        muscleFilter === "all" ||
+        exercise.muscles.map((m) => m.toLowerCase()).includes(muscleFilter.toLowerCase());
+      const matchesType = typeFilter === "all" || exercise.type === typeFilter;
+      return matchesQuery && matchesMuscle && matchesType;
+    });
+  }, [exercises, muscleFilter, query, typeFilter]);
         muscleFilter === "all" || exercise.muscles.map((m) => m.toLowerCase()).includes(muscleFilter.toLowerCase());
       const matchesType = typeFilter === "all" || exercise.type === typeFilter;
       return matchesQuery && matchesMuscle && matchesType;
@@ -45,6 +102,19 @@ export default function Exercises() {
       setSelectedExerciseId(filteredExercises[0].id);
     }
   }, [filteredExercises, selectedExerciseId]);
+
+  const selectedExercise =
+    filteredExercises.find((exercise) => exercise.id === selectedExerciseId) ??
+    filteredExercises[0] ??
+    exercises[0] ??
+    null;
+
+  const stats = useMemo(() => {
+    const total = filteredExercises.length;
+    const totalCalories = filteredExercises.reduce(
+      (sum, exercise) => sum + (exercise.caloriesBurned ?? 0),
+      0
+    );
 
   const selectedExercise = filteredExercises.find((exercise) => exercise.id === selectedExerciseId) ??
     filteredExercises[0] ??
@@ -71,6 +141,7 @@ export default function Exercises() {
             <p className="text-sm text-gray-400">ค้นหาและจัดการรายละเอียดของท่าฝึกที่ใช้ในโปรแกรม</p>
           </div>
         </div>
+        <Button variant="secondary" className="w-full md:w-auto" disabled={loading}>
         <Button variant="secondary" className="w-full md:w-auto">
           <Plus size={16} /> เพิ่มท่าฝึกใหม่
         </Button>
@@ -121,6 +192,7 @@ export default function Exercises() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="ค้นหาจากชื่อท่าฝึก คำอธิบาย หรือกล้ามเนื้อที่เกี่ยวข้อง"
               className="pl-10"
+              disabled={loading || !!error}
             />
           </div>
         </div>
@@ -135,6 +207,7 @@ export default function Exercises() {
               value={muscleFilter}
               onChange={(e) => setMuscleFilter(e.target.value)}
               className="w-full rounded-xl bg-gray-800 border border-gray-600 px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+              disabled={loading || !!error}
             >
               {muscleOptions.map((option) => (
                 <option key={option.value} value={option.value}>
