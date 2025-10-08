@@ -1,12 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Card, Button, Input, Badge } from "../components/ui.jsx";
+import { Card, Button, Input, Textarea, Badge } from "../components/ui.jsx";
 import { Dumbbell, Search, Filter, Plus, Flame, Clock, CheckCircle2 } from "lucide-react";
 
 import { fetchExercises } from "../api/client.js";
-
-import { Card, Button, Input, Textarea, Badge } from "../components/ui.jsx";
 import { exercisesData } from "../data/fitnessData.js";
-import { Dumbbell, Search, Filter, Plus, Flame, Clock, CheckCircle2 } from "lucide-react";
 
 const muscleOptions = [
   { value: "all", label: "ทั้งหมด" },
@@ -44,8 +41,10 @@ export default function Exercises() {
               muscles: Array.isArray(exercise.muscles) ? exercise.muscles : [],
             }))
           : [];
-        setExercises(normalized);
-        setSelectedExerciseId(normalized[0]?.id ?? null);
+        // fallback to bundled data if there is nothing in the API
+        const final = normalized.length > 0 ? normalized : exercisesData;
+        setExercises(final);
+        setSelectedExerciseId((prev) => prev ?? final[0]?.id ?? null);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -68,30 +67,17 @@ export default function Exercises() {
   const filteredExercises = useMemo(() => {
     const term = query.toLowerCase();
     return exercises.filter((exercise) => {
-  const [query, setQuery] = useState("");
-  const [muscleFilter, setMuscleFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [selectedExerciseId, setSelectedExerciseId] = useState(exercisesData[0]?.id ?? null);
-
-  const filteredExercises = useMemo(() => {
-    const term = query.toLowerCase();
-    return exercisesData.filter((exercise) => {
+      const name = (exercise.name || "").toLowerCase();
+      const desc = (exercise.description || "").toLowerCase();
+      const muscles = Array.isArray(exercise.muscles) ? exercise.muscles : [];
       const matchesQuery =
-        exercise.name.toLowerCase().includes(term) ||
-        exercise.description.toLowerCase().includes(term) ||
-        exercise.muscles.some((muscle) => muscle.toLowerCase().includes(term));
+        name.includes(term) || desc.includes(term) || muscles.some((m) => m.toLowerCase().includes(term));
       const matchesMuscle =
-        muscleFilter === "all" ||
-        exercise.muscles.map((m) => m.toLowerCase()).includes(muscleFilter.toLowerCase());
+        muscleFilter === "all" || muscles.map((m) => m.toLowerCase()).includes(muscleFilter.toLowerCase());
       const matchesType = typeFilter === "all" || exercise.type === typeFilter;
       return matchesQuery && matchesMuscle && matchesType;
     });
   }, [exercises, muscleFilter, query, typeFilter]);
-        muscleFilter === "all" || exercise.muscles.map((m) => m.toLowerCase()).includes(muscleFilter.toLowerCase());
-      const matchesType = typeFilter === "all" || exercise.type === typeFilter;
-      return matchesQuery && matchesMuscle && matchesType;
-    });
-  }, [query, muscleFilter, typeFilter]);
 
   useEffect(() => {
     if (filteredExercises.length === 0) {
@@ -107,18 +93,6 @@ export default function Exercises() {
     filteredExercises.find((exercise) => exercise.id === selectedExerciseId) ??
     filteredExercises[0] ??
     exercises[0] ??
-    null;
-
-  const stats = useMemo(() => {
-    const total = filteredExercises.length;
-    const totalCalories = filteredExercises.reduce(
-      (sum, exercise) => sum + (exercise.caloriesBurned ?? 0),
-      0
-    );
-
-  const selectedExercise = filteredExercises.find((exercise) => exercise.id === selectedExerciseId) ??
-    filteredExercises[0] ??
-    exercisesData[0] ??
     null;
 
   const stats = useMemo(() => {
@@ -142,7 +116,6 @@ export default function Exercises() {
           </div>
         </div>
         <Button variant="secondary" className="w-full md:w-auto" disabled={loading}>
-        <Button variant="secondary" className="w-full md:w-auto">
           <Plus size={16} /> เพิ่มท่าฝึกใหม่
         </Button>
       </div>
