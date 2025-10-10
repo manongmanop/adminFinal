@@ -1,31 +1,32 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import mkcert from 'vite-plugin-mkcert'
 
-// เปลี่ยนที่นี่ให้ตรงกับเครื่อง/พอร์ต backend ของคุณ
-const BACKEND = 'http://10.198.200.52:5000'
+const BACKEND = 'http://10.198.200.52:8000'
 
-export default defineConfig({
-  plugins: [react(),mkcert()],
-  server: {
-    host: true,        // ให้เข้าผ่าน IP LAN ได้ (เช่น http://10.198.200.52:5173)
-    https: true,      // Dev ง่ายสุดใช้ http ทั้งคู่
-    proxy: {
-      // ครอบคลุมทุก API ของคุณ
-      '/api': {
-        target: BACKEND,
-        changeOrigin: true,
-      },
-      // ให้รูป/วิดีโอที่เสิร์ฟจาก Express ใช้งานผ่าน frontend origin ได้
-      '/uploads': {
-        target: BACKEND,
-        changeOrigin: true,
-      },
-      // เผื่อคุณมี /health บน backend
-      '/health': {
-        target: BACKEND,
-        changeOrigin: true,
+// Make mkcert optional: use HTTPS if available, otherwise fallback to HTTP
+export default defineConfig(async () => {
+  const plugins = [react()]
+  let useHttps = false
+
+  try {
+    const { default: mkcert } = await import('vite-plugin-mkcert')
+    plugins.push(mkcert())
+    useHttps = true
+  } catch (e) {
+    console.warn('vite-plugin-mkcert not installed; using HTTP dev server')
+  }
+
+  return {
+    plugins,
+    server: {
+      host: true,
+      https: useHttps,
+      proxy: {
+        '/api': { target: BACKEND, changeOrigin: true },
+        '/uploads': { target: BACKEND, changeOrigin: true },
+        '/health': { target: BACKEND, changeOrigin: true },
       },
     },
-  },
+  }
 })
+

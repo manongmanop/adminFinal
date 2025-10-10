@@ -3,22 +3,23 @@ import { X } from "lucide-react";
 
 /* ================== Button ================== */
 export const Button = ({ children, variant = "primary", size = "md", className = "", ...props }) => {
-  const baseClasses =
-    "inline-flex items-center gap-2 rounded-xl font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900";
+  const base = "inline-flex items-center gap-2 rounded-xl font-semibold transition-all duration-150 focus:outline-none";
   const variants = {
-    primary:
-      "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg hover:shadow-xl focus:ring-emerald-500",
-    secondary: "bg-gray-700 hover:bg-gray-600 text-gray-200 border border-gray-600 focus:ring-gray-500",
-    ghost: "text-gray-300 hover:text-white hover:bg-gray-800 focus:ring-gray-500",
-    danger: "bg-rose-600 hover:bg-rose-700 text-white focus:ring-rose-500",
+    primary: "bg-primary text-white shadow-sm hover:shadow-md",
+    secondary: "bg-surface-2 text-text border border-gray-200 hover:bg-surface",
+    ghost: "bg-transparent text-primary hover:bg-surface-2",
+    danger: "bg-rose-500 text-white hover:bg-rose-600",
   };
   const sizes = {
-    sm: "px-3 py-2 text-sm",
-    md: "px-4 py-2.5 text-sm",
-    lg: "px-6 py-3 text-base",
+    sm: "px-3 py-1.5 text-sm",
+    md: "px-4 py-2 text-sm",
+    lg: "px-5 py-2.5 text-base",
   };
   return (
-    <button className={`${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`} {...props}>
+    <button
+      className={`${base} ${variants[variant] || variants.primary} ${sizes[size]} ${className}`}
+      {...props}
+    >
       {children}
     </button>
   );
@@ -26,7 +27,7 @@ export const Button = ({ children, variant = "primary", size = "md", className =
 
 /* ================== Card ================== */
 export const Card = ({ children, className = "", ...props }) => (
-  <div className={`bg-gray-800 rounded-2xl border border-gray-700 shadow-xl ${className}`} {...props}>
+  <div className={`card-surface p-4 ${className}`} {...props}>
     {children}
   </div>
 );
@@ -34,17 +35,13 @@ export const Card = ({ children, className = "", ...props }) => (
 /* ================== Badge ================== */
 export const Badge = ({ children, variant = "blue", className = "" }) => {
   const variants = {
-    blue: "bg-blue-50 text-blue-700 ring-blue-200",
-    success: "bg-emerald-50 text-emerald-600 ring-emerald-200",
-    warning: "bg-amber-50 text-amber-600 ring-amber-200",
-    gray: "bg-gray-100 text-gray-700 ring-gray-200",
+    blue: "bg-primary/10 text-primary ring-primary/10",
+    success: "bg-emerald-100 text-emerald-700",
+    warning: "bg-amber-100 text-amber-700",
+    gray: "bg-gray-100 text-gray-700",
   };
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ring-1 ring-inset ${
-        variants[variant] || variants.blue
-      } ${className}`}
-    >
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${variants[variant] || variants.blue} ${className}`}>
       {children}
     </span>
   );
@@ -53,14 +50,14 @@ export const Badge = ({ children, variant = "blue", className = "" }) => {
 /* ================== Input / Textarea / Label ================== */
 export const Input = ({ className = "", ...props }) => (
   <input
-    className={`w-full rounded-xl bg-gray-800 border border-gray-600 px-4 py-2.5 text-gray-200 placeholder-gray-400 shadow-inner focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-colors ${className}`}
+    className={`w-full rounded-lg bg-surface-2 border border-gray-200 px-4 py-2 text-sm text-text placeholder-gray-400 focus:ring-2 focus:ring-primary/20 focus:border-primary ${className}`}
     {...props}
   />
 );
 
 export const Textarea = ({ className = "", ...props }) => (
   <textarea
-    className={`w-full rounded-xl bg-gray-800 border border-gray-600 px-4 py-2.5 text-gray-200 placeholder-gray-400 shadow-inner focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-colors resize-none ${className}`}
+    className={`w-full rounded-lg bg-surface-2 border border-gray-200 px-4 py-2 text-sm text-text placeholder-gray-400 focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none ${className}`}
     {...props}
   />
 );
