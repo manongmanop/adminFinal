@@ -158,8 +158,10 @@
 }
 
 .stat-card:hover {
-  background: rgba(30, 41, 59, 0.8);
+  background: #ffffff;
+  border-color: #d1d5db;
   transform: translateY(-2px);
+  color: #0f172a;
 }
 
 .stat-icon {
@@ -530,10 +532,11 @@
 }
 
 .user-card:hover {
-  background: rgba(30, 41, 59, 0.6);
-  border-color: rgba(148, 163, 184, 0.2);
+  background: #ffffff;
+  border-color: #e5e7eb;
   transform: translateY(-4px);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  color: #0f172a;
 }
 
 .user-card-header {

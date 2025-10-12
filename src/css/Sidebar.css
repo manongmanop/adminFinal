@@ -1,0 +1,306 @@
+/* ===================================
+   Sidebar - Minimal Theme
+   =================================== */
+
+:root {
+  --sidebar-width: 280px;
+  --sidebar-bg: #ffffff;
+  --sidebar-border: #e5e7eb;
+  --sidebar-text: #374151;
+  --sidebar-text-muted: #6b7280;
+  --sidebar-hover: #f9fafb;
+  --sidebar-active: #f3f4f6;
+  --sidebar-accent: #3b82f6;
+  --sidebar-logo-bg: #1f2937;
+  --overlay-bg: rgba(0, 0, 0, 0.3);
+  --transition-speed: 0.3s;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Overlay */
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--overlay-bg);
+  backdrop-filter: blur(2px);
+  z-index: 1100;
+  animation: fadeIn var(--transition-speed) ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Sidebar Container */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-width);
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+  z-index: 1200;
+  transform: translateX(-100%);
+  transition: transform var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-md);
+}
+
+.sidebar--open {
+  transform: translateX(0);
+}
+
+/* Always behave as a hamburger drawer; visibility controlled by .sidebar--open */
+/* On desktop, sidebar docks left and overlay is hidden */
+@media (min-width: 1024px) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    left: auto;
+    bottom: auto;
+    transform: none;
+    width: var(--sidebar-w, var(--sidebar-width));
+    height: 100dvh;
+    z-index: 30;
+    box-shadow: none;
+  }
+  .sidebar-overlay { display: none !important; }
+  /* Sidebar content starts at top; topbar does not overlay sidebar on desktop */
+  .sidebar__container { padding-top: 1.5rem; }
+}
+
+/* On small screens, make drawer width responsive */
+@media (max-width: 1023.98px) {
+  .sidebar {
+    width: min(86vw, 340px);
+  }
+}
+
+/* Sidebar Inner Container */
+.sidebar__container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+    padding: 1.5rem 0;
+    gap: 1rem;
+    /* padding-bottom to accommodate footer */
+}
+
+/* Drawer behavior at all breakpoints; overlay used when open */
+
+/* ===================================
+   Header Section
+   =================================== */
+
+.sidebar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem 1.5rem;
+  border-bottom: 1px solid var(--sidebar-border);
+  margin-bottom: 1.5rem;
+}
+
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.sidebar__logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  background: var(--sidebar-logo-bg);
+  border-radius: 10px;
+  color: white;
+  flex-shrink: 0;
+}
+
+.sidebar__brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.sidebar__title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--sidebar-text);
+  line-height: 1.2;
+  margin: 0;
+}
+
+.sidebar__subtitle {
+  font-size: 0.75rem;
+  color: var(--sidebar-text-muted);
+  margin: 0;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+}
+
+.sidebar__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--sidebar-text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sidebar__close:hover {
+  background: var(--sidebar-hover);
+  color: var(--sidebar-text);
+}
+
+/* Hide close button on desktop, show on mobile */
+@media (min-width: 1024px) {
+  .sidebar__close { display: none; }
+}
+
+/* ===================================
+   Navigation Section
+   =================================== */
+
+.sidebar__nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  overflow-y: auto;
+}
+
+/* Custom scrollbar */
+.sidebar__nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar__nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar__nav::-webkit-scrollbar-thumb {
+  background: var(--sidebar-border);
+  border-radius: 3px;
+}
+
+.sidebar__nav::-webkit-scrollbar-thumb:hover {
+  background: var(--sidebar-text-muted);
+}
+
+/* Nav Item */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--sidebar-text);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  width: 100%;
+}
+
+.nav-item:hover {
+  background: var(--sidebar-hover);
+  color: var(--sidebar-text);
+}
+
+.nav-item--active {
+  background: var(--sidebar-active);
+  color: var(--sidebar-accent);
+  font-weight: 600;
+}
+
+.nav-item--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  background: var(--sidebar-accent);
+  border-radius: 0 2px 2px 0;
+}
+
+.nav-item__icon {
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.nav-item--active .nav-item__icon {
+  opacity: 1;
+}
+
+.nav-item__label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-item__badge {
+  margin-left: auto;
+  font-size: 0.75rem;
+}
+
+/* ===================================
+   Footer Section
+   =================================== */
+
+.sidebar__footer {
+  padding: 1.5rem 1.5rem 0;
+  border-top: 1px solid var(--sidebar-border);
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.sidebar__copyright {
+  font-size: 0.75rem;
+  color: var(--sidebar-text-muted);
+  margin: 0 0 0.25rem;
+}
+
+.sidebar__version {
+  font-size: 0.6875rem;
+  color: var(--sidebar-text-muted);
+  opacity: 0.7;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* ===================================
+   Responsive Design
+   =================================== */
+
+@media (max-width: 1023px) {
+  .sidebar {
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    width: 85vw;
+    max-width: 320px;
+  }
+}

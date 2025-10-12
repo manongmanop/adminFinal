@@ -1,7 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Card, Button, Input, Textarea, Badge } from "../components/ui.jsx";
-import { Dumbbell, Search, Filter, Plus, Flame, Clock, CheckCircle2 } from "lucide-react";
-
+import { 
+  Dumbbell, 
+  Search, 
+  Filter, 
+  Plus, 
+  Flame, 
+  Clock, 
+  CheckCircle2,
+  Target,
+  TrendingUp,
+  Layers
+} from "lucide-react";
+import "../css/Exercises.css";
 import { fetchExercises } from "../api/client.js";
 import { exercisesData } from "../data/fitnessData.js";
 
@@ -41,7 +52,6 @@ export default function Exercises() {
               muscles: Array.isArray(exercise.muscles) ? exercise.muscles : [],
             }))
           : [];
-        // fallback to bundled data if there is nothing in the API
         const final = normalized.length > 0 ? normalized : exercisesData;
         setExercises(final);
         setSelectedExerciseId((prev) => prev ?? final[0]?.id ?? null);
@@ -104,214 +114,286 @@ export default function Exercises() {
   }, [filteredExercises]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-2xl border border-gray-700 bg-gradient-to-br from-gray-900 to-gray-800 p-6 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-500/20 text-sky-400">
+    <div className="exercises">
+      {/* Header */}
+      <div className="exercises__header">
+        <div className="exercises__header-content">
+          <div className="exercises__header-icon">
             <Dumbbell size={28} />
           </div>
-          <div>
-            <h1 className="text-2xl font-semibold text-white">คลังท่าฝึกออกกำลังกาย</h1>
-            <p className="text-sm text-gray-400">ค้นหาและจัดการรายละเอียดของท่าฝึกที่ใช้ในโปรแกรม</p>
+          <div className="exercises__header-text">
+            <h1 className="exercises__title">คลังท่าออกกำลังกาย</h1>
+            <p className="exercises__subtitle">
+              ค้นหาและจัดการรายละเอียดของท่าฝึกที่ใช้ในโปรแกรม
+            </p>
           </div>
         </div>
-        <Button variant="secondary" className="w-full md:w-auto" disabled={loading}>
-          <Plus size={16} /> เพิ่มท่าฝึกใหม่
+        <Button variant="secondary" disabled={loading}>
+          <Plus size={16} />
+          <span>เพิ่มท่าฝึกใหม่</span>
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="p-6">
-          <div className="text-sm text-gray-400">จำนวนท่าฝึกทั้งหมด</div>
-          <div className="mt-2 text-2xl font-semibold text-white">{stats.total}</div>
-          <p className="text-xs text-gray-500">ผลลัพธ์ตามการค้นหา</p>
-        </Card>
-        <Card className="p-6">
-          <div className="flex items-center justify-between text-sm text-gray-400">
-            <span>แบบจำนวนครั้ง</span>
-            <CheckCircle2 size={16} className="text-emerald-400" />
+      {/* Stats */}
+      <div className="exercises__stats">
+        <Card className="stat-card">
+          <div className="stat-card__header">
+            <span className="stat-card__label">จำนวนท่าฝึก</span>
+            <div className="stat-card__icon stat-card__icon--blue">
+              <Layers size={18} />
+            </div>
           </div>
-          <div className="mt-2 text-2xl font-semibold text-white">{stats.repsCount}</div>
-          <p className="text-xs text-gray-500">ท่าฝึกที่กำหนดด้วยจำนวนครั้ง</p>
+          <div className="stat-card__value">{stats.total}</div>
+          <p className="stat-card__description">ผลลัพธ์ตามการค้นหา</p>
         </Card>
-        <Card className="p-6">
-          <div className="flex items-center justify-between text-sm text-gray-400">
-            <span>แบบจับเวลา</span>
-            <Clock size={16} className="text-sky-400" />
+
+        <Card className="stat-card">
+          <div className="stat-card__header">
+            <span className="stat-card__label">แบบจำนวนครั้ง</span>
+            <div className="stat-card__icon stat-card__icon--emerald">
+              <CheckCircle2 size={18} />
+            </div>
           </div>
-          <div className="mt-2 text-2xl font-semibold text-white">{stats.timeCount}</div>
-          <p className="text-xs text-gray-500">ท่าฝึกที่กำหนดด้วยเวลา</p>
+          <div className="stat-card__value">{stats.repsCount}</div>
+          <p className="stat-card__description">ท่าฝึกที่กำหนดด้วยจำนวนครั้ง</p>
         </Card>
-        <Card className="p-6">
-          <div className="flex items-center justify-between text-sm text-gray-400">
-            <span>พลังงานรวม</span>
-            <Flame size={16} className="text-amber-400" />
+
+        <Card className="stat-card">
+          <div className="stat-card__header">
+            <span className="stat-card__label">แบบจับเวลา</span>
+            <div className="stat-card__icon stat-card__icon--purple">
+              <Clock size={18} />
+            </div>
           </div>
-          <div className="mt-2 text-2xl font-semibold text-white">{stats.totalCalories}</div>
-          <p className="text-xs text-gray-500">แคลอรีที่เผาผลาญรวม</p>
+          <div className="stat-card__value">{stats.timeCount}</div>
+          <p className="stat-card__description">ท่าฝึกที่กำหนดด้วยเวลา</p>
+        </Card>
+
+        <Card className="stat-card">
+          <div className="stat-card__header">
+            <span className="stat-card__label">พลังงานรวม</span>
+            <div className="stat-card__icon stat-card__icon--orange">
+              <Flame size={18} />
+            </div>
+          </div>
+          <div className="stat-card__value">{stats.totalCalories}</div>
+          <p className="stat-card__description">แคลอรีที่เผาผลาญรวม</p>
         </Card>
       </div>
 
-      <div className="grid gap-4 rounded-2xl border border-gray-700 bg-gray-900/60 p-6 md:grid-cols-4">
-        <div className="md:col-span-2">
-          <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="exercise-search">
-            ค้นหาท่าฝึก
-          </label>
-          <div className="relative">
-            <Search size={18} className="absolute left-3 top-3 text-gray-400" />
-            <Input
-              id="exercise-search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="ค้นหาจากชื่อท่าฝึก คำอธิบาย หรือกล้ามเนื้อที่เกี่ยวข้อง"
-              className="pl-10"
-              disabled={loading || !!error}
-            />
+      {/* Filters */}
+      <Card className="exercises__filters">
+        <div className="exercises__filters-grid">
+          <div className="filter-group filter-group--search">
+            <label className="filter-label" htmlFor="exercise-search">
+              ค้นหาท่าฝึก
+            </label>
+            <div className="filter-input-wrapper">
+              <Search size={18} className="filter-icon" />
+              <Input
+                id="exercise-search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="ค้นหาจากชื่อท่าฝึก คำอธิบาย หรือกล้ามเนื้อ"
+                className="filter-input"
+                disabled={loading || !!error}
+              />
+            </div>
           </div>
-        </div>
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="exercise-muscle">
-            กล้ามเนื้อเป้าหมาย
-          </label>
-          <div className="flex items-center gap-2">
-            <Filter size={16} className="text-gray-400" />
+
+          <div className="filter-group">
+            <label className="filter-label" htmlFor="exercise-muscle">
+              กล้ามเนื้อเป้าหมาย
+            </label>
+            <div className="filter-select-wrapper">
+              <Filter size={16} className="filter-icon-left" />
+              <select
+                id="exercise-muscle"
+                value={muscleFilter}
+                onChange={(e) => setMuscleFilter(e.target.value)}
+                className="filter-select"
+                disabled={loading || !!error}
+              >
+                {muscleOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="filter-group">
+            <label className="filter-label" htmlFor="exercise-type">
+              ประเภทการกำหนด
+            </label>
             <select
-              id="exercise-muscle"
-              value={muscleFilter}
-              onChange={(e) => setMuscleFilter(e.target.value)}
-              className="w-full rounded-xl bg-gray-800 border border-gray-600 px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+              id="exercise-type"
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="filter-select"
               disabled={loading || !!error}
             >
-              {muscleOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
+              <option value="all">ทั้งหมด</option>
+              <option value="reps">จำนวนครั้ง</option>
+              <option value="time">เวลา</option>
             </select>
           </div>
         </div>
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="exercise-type">
-            ประเภทการกำหนด
-          </label>
-          <select
-            id="exercise-type"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="w-full rounded-xl bg-gray-800 border border-gray-600 px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-          >
-            <option value="all">ทั้งหมด</option>
-            <option value="reps">จำนวนครั้ง</option>
-            <option value="time">เวลา</option>
-          </select>
-        </div>
-      </div>
+      </Card>
 
-      <div className="grid gap-6 lg:grid-cols-[22rem_1fr]">
-        <div className="space-y-4">
-          {filteredExercises.map((exercise) => (
-            <Card
-              key={exercise.id}
-              className={`cursor-pointer border ${
-                exercise.id === selectedExercise?.id ? "border-sky-500" : "border-gray-700"
-              } bg-gray-900/70 p-5 transition hover:border-sky-400/70`}
-              onClick={() => setSelectedExerciseId(exercise.id)}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold text-white">{exercise.name}</h3>
-                  <p className="text-xs text-gray-400">{exercise.description}</p>
-                  <div className="flex flex-wrap gap-2 text-xs text-gray-400">
+      {/* Content */}
+      {loading ? (
+        <Card className="exercises__loading">
+          <div className="loading-spinner"></div>
+          <p>กำลังโหลดข้อมูลท่าฝึก...</p>
+        </Card>
+      ) : error ? (
+        <Card className="exercises__error">
+          <p>{error}</p>
+          <Button variant="secondary" onClick={() => window.location.reload()}>
+            ลองใหม่อีกครั้ง
+          </Button>
+        </Card>
+      ) : (
+        <div className="exercises__content">
+          {/* Exercise List */}
+          <div className="exercises__list">
+            <h2 className="exercises__list-title">รายการท่าฝึก ({filteredExercises.length})</h2>
+            
+            {filteredExercises.map((exercise) => (
+              <Card
+                key={exercise.id}
+                className={`exercise-item ${
+                  exercise.id === selectedExercise?.id ? "exercise-item--active" : ""
+                }`}
+                onClick={() => setSelectedExerciseId(exercise.id)}
+              >
+                <div className="exercise-item__header">
+                  <div className="exercise-item__icon">
+                    <Target size={20} />
+                  </div>
+                  <div className="exercise-item__info">
+                    <h3 className="exercise-item__name">{exercise.name}</h3>
+                    <p className="exercise-item__description">{exercise.description}</p>
+                  </div>
+                  <Badge variant={exercise.type === "reps" ? "success" : "blue"}>
+                    {exercise.type === "reps" ? "ครั้ง" : "เวลา"}
+                  </Badge>
+                </div>
+
+                {exercise.muscles.length > 0 && (
+                  <div className="exercise-item__muscles">
                     {exercise.muscles.map((muscle) => (
-                      <span key={muscle} className="rounded-full bg-gray-800 px-3 py-1">
+                      <span key={muscle} className="exercise-item__muscle">
                         #{muscle}
                       </span>
                     ))}
                   </div>
+                )}
+              </Card>
+            ))}
+
+            {filteredExercises.length === 0 && (
+              <Card className="exercises__empty">
+                <Search size={48} className="exercises__empty-icon" />
+                <p className="exercises__empty-text">ไม่พบข้อมูลท่าฝึกตามเงื่อนไขที่เลือก</p>
+              </Card>
+            )}
+          </div>
+
+          {/* Exercise Details */}
+          {selectedExercise ? (
+            <Card className="exercise-details">
+              <div className="exercise-details__header">
+                <div>
+                  <h2 className="exercise-details__title">รายละเอียดท่าฝึก</h2>
+                  <p className="exercise-details__subtitle">
+                    จัดการข้อมูลเพื่อให้การฝึกมีประสิทธิภาพสูงสุด
+                  </p>
                 </div>
-                <Badge variant={exercise.type === "reps" ? "success" : "blue"}>
-                  {exercise.type === "reps" ? "จำนวนครั้ง" : "เวลา"}
+                <Badge variant={selectedExercise.type === "reps" ? "success" : "blue"}>
+                  {selectedExercise.type === "reps" ? "จำนวนครั้ง" : "เวลา"}
                 </Badge>
               </div>
+
+              <div className="exercise-details__body">
+                <div className="detail-row">
+                  <div className="detail-group">
+                    <label className="detail-label">ชื่อท่าฝึก</label>
+                    <Input value={selectedExercise.name} readOnly />
+                  </div>
+                  <div className="detail-group">
+                    <label className="detail-label">พลังงานที่เผาผลาญ</label>
+                    <div className="detail-value-box">
+                      <Flame size={16} className="detail-icon" />
+                      <span>{selectedExercise.caloriesBurned} แคลอรี</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="detail-group">
+                  <label className="detail-label">รายละเอียด</label>
+                  <Textarea value={selectedExercise.description} readOnly rows={3} />
+                </div>
+
+                <div className="detail-group">
+                  <label className="detail-label">คำแนะนำการปฏิบัติ</label>
+                  <Textarea value={selectedExercise.tips} readOnly rows={3} />
+                </div>
+
+                <div className="detail-row">
+                  {selectedExercise.type === "reps" ? (
+                    <div className="detail-group">
+                      <label className="detail-label">จำนวนครั้งที่แนะนำ</label>
+                      <div className="detail-value-box">
+                        <CheckCircle2 size={16} className="detail-icon" />
+                        <span>{selectedExercise.value} ครั้ง</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="detail-group">
+                      <label className="detail-label">ระยะเวลาที่แนะนำ</label>
+                      <div className="detail-value-box">
+                        <Clock size={16} className="detail-icon" />
+                        <span>{selectedExercise.duration} วินาที</span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="detail-group">
+                    <label className="detail-label">ไฟล์วิดีโอ</label>
+                    <Input value={selectedExercise.video} readOnly />
+                  </div>
+                </div>
+
+                <div className="detail-row">
+                  <div className="detail-group">
+                    <label className="detail-label">รูปภาพประกอบ</label>
+                    <Input value={selectedExercise.image} readOnly />
+                  </div>
+                  <div className="detail-group">
+                    <label className="detail-label">กล้ามเนื้อเป้าหมาย</label>
+                    <div className="detail-muscles">
+                      {selectedExercise.muscles.map((muscle) => (
+                        <Badge key={muscle} variant="gray">
+                          {muscle}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </Card>
-          ))}
-          {filteredExercises.length === 0 && (
-            <Card className="p-6 text-center text-gray-400">ไม่พบข้อมูลท่าฝึกตามเงื่อนไขที่เลือก</Card>
+          ) : (
+            <Card className="exercises__no-selection">
+              <Target size={64} className="exercises__no-selection-icon" />
+              <p className="exercises__no-selection-text">
+                เลือกท่าฝึกจากด้านซ้ายเพื่อดูรายละเอียด
+              </p>
+            </Card>
           )}
         </div>
-
-        {selectedExercise ? (
-          <Card className="space-y-6 border border-gray-700 bg-gray-900/70 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-white">รายละเอียดท่าฝึก</h2>
-                <p className="text-sm text-gray-400">จัดการข้อมูลเพื่อให้การฝึกมีประสิทธิภาพสูงสุด</p>
-              </div>
-              <Badge variant={selectedExercise.type === "reps" ? "success" : "blue"}>
-                {selectedExercise.type === "reps" ? "จำนวนครั้ง" : "เวลา"}
-              </Badge>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-300">ชื่อท่าฝึก</label>
-                <Input value={selectedExercise.name} readOnly className="bg-gray-800/80" />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-300">พลังงานที่เผาผลาญ</label>
-                <Input value={`${selectedExercise.caloriesBurned} แคลอรี`} readOnly className="bg-gray-800/80" />
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-300">รายละเอียด</label>
-              <Textarea value={selectedExercise.description} readOnly rows={3} className="bg-gray-800/80" />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-300">คำแนะนำการปฏิบัติ</label>
-              <Textarea value={selectedExercise.tips} readOnly rows={3} className="bg-gray-800/80" />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              {selectedExercise.type === "reps" ? (
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-300">จำนวนครั้งที่แนะนำ</label>
-                  <Input value={`${selectedExercise.value} ครั้ง`} readOnly className="bg-gray-800/80" />
-                </div>
-              ) : (
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-300">ระยะเวลาที่แนะนำ</label>
-                  <Input value={`${selectedExercise.duration} วินาที`} readOnly className="bg-gray-800/80" />
-                </div>
-              )}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-300">ไฟล์วิดีโอ</label>
-                <Input value={selectedExercise.video} readOnly className="bg-gray-800/80" />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-300">รูปภาพประกอบ</label>
-                <Input value={selectedExercise.image} readOnly className="bg-gray-800/80" />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-300">กล้ามเนื้อเป้าหมาย</label>
-                <div className="flex flex-wrap gap-2">
-                  {selectedExercise.muscles.map((muscle) => (
-                    <Badge key={muscle} className="bg-gray-800 text-gray-300">
-                      {muscle}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </Card>
-        ) : (
-          <Card className="p-10 text-center text-gray-400">เลือกท่าฝึกจากด้านซ้ายเพื่อดูรายละเอียด</Card>
-        )}
-      </div>
+      )}
     </div>
   );
 }

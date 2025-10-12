@@ -1,57 +1,65 @@
 import React from "react";
-import { LayoutDashboard, Dumbbell, ListChecks, MessageSquare, Settings, X } from "lucide-react";
+import { LayoutDashboard, Dumbbell, ListChecks, MessageSquare, X } from "lucide-react";
 import { Badge } from "../components/ui.jsx";
+import "../css/Sidebar.css";
 
 const NavItem = ({ icon: Icon, label, active, onClick, badge }) => (
-  <button
-    onClick={onClick}
-    className={`relative flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
-      active
-        ? "bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg"
-        : "text-gray-300 hover:text-white hover:bg-gray-700/50"
-    }`}
+  <button 
+    onClick={onClick} 
+    className={`nav-item ${active ? 'nav-item--active' : ''}`}
   >
-    <Icon size={20} />
-    <span className="flex-1 text-left">{label}</span>
-    {badge && <Badge variant="success" className="text-xs">{badge}</Badge>}
+    <Icon size={20} className="nav-item__icon" />
+    <span className="nav-item__label">{label}</span>
+    {badge && (
+      <Badge variant="success" className="nav-item__badge">
+        {badge}
+      </Badge>
+    )}
   </button>
 );
 
 export default function Sidebar({ open, setOpen, active, setActive }) {
   const items = [
-    { key: "overview", icon: LayoutDashboard, label: "ภาพรวม" },
+    { key: "overview", icon: LayoutDashboard, label: "สรุปภาพรวมระบบ" },
     { key: "programs", icon: Dumbbell, label: "โปรแกรมออกกำลังกาย", badge: "6" },
     { key: "exercises", icon: ListChecks, label: "ท่าฝึกทั้งหมด", badge: "12" },
-    { key: "feedback", icon: MessageSquare, label: "ความคิดเห็นผู้ใช้", badge: "32" },
-    { key: "settings", icon: Settings, label: "ตั้งค่าระบบ" }
+    { key: "feedback", icon: MessageSquare, label: "ความคิดเห็นผู้ใช้", badge: "32" }
   ];
 
   return (
     <>
       {open && (
-        <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden" onClick={() => setOpen(false)} />
+        <div 
+          className="sidebar-overlay" 
+          onClick={() => setOpen(false)} 
+          aria-hidden="true"
+        />
       )}
 
-      <div className={`fixed inset-y-0 left-0 z-50 w-80 transform bg-gray-900 transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
-        open ? "translate-x-0" : "-translate-x-full"
-      }`}>
-        <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between p-6 border-b border-gray-700">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                <Dumbbell size={20} className="text-white" />
+      <aside className={`sidebar ${open ? 'sidebar--open' : ''}`}>
+        <div className="sidebar__container">
+          {/* Header */}
+          <div className="sidebar__header">
+            <div className="sidebar__brand">
+              <div className="sidebar__logo">
+                <Dumbbell size={24} />
               </div>
-              <div>
-                <h2 className="text-lg font-bold text-white">FitAdmin</h2>
-                <p className="text-xs text-gray-400">Control Center</p>
+              <div className="sidebar__brand-text">
+                <h2 className="sidebar__title">FitAdmin</h2>
+                <p className="sidebar__subtitle">Control Center</p>
               </div>
             </div>
-            <button className="text-gray-400 hover:text-white md:hidden" onClick={() => setOpen(false)}>
+            <button 
+              className="sidebar__close" 
+              onClick={() => setOpen(false)}
+              aria-label="Close sidebar"
+            >
               <X size={20} />
             </button>
           </div>
 
-          <nav className="flex-1 p-4 space-y-2">
+          {/* Navigation */}
+          <nav className="sidebar__nav">
             {items.map((item) => (
               <NavItem
                 key={item.key}
@@ -67,13 +75,13 @@ export default function Sidebar({ open, setOpen, active, setActive }) {
             ))}
           </nav>
 
-          <div className="p-4 border-t border-gray-700">
-            <div className="text-xs text-gray-500 text-center">
-              © 2024 FitAdmin v1.0
-            </div>
+          {/* Footer */}
+          <div className="sidebar__footer">
+            <p className="sidebar__copyright">© 2024 FitAdmin</p>
+            <p className="sidebar__version">v1.0</p>
           </div>
         </div>
-      </div>
+      </aside>
     </>
   );
 }

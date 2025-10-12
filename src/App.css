@@ -40,3 +40,56 @@
 .read-the-docs {
   color: #888;
 }
+
+/* ===== App Layout ===================================================== */
+
+.app {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: var(--topbar-h, 72px) 1fr;
+  min-height: 100dvh;
+  background: var(--bg, #ffffff);
+  color: var(--text, #0f172a);
+}
+
+.app-sidebar { display: contents; }
+
+.app-topbar {
+  grid-row: 1 / 2;
+  grid-column: 1 / 2;
+  position: sticky;
+  top: 0;
+  width: 100%;
+  z-index: 1000; /* ensure dropdown overlays page content */
+}
+
+.app-main {
+  grid-row: 2 / 3;
+  grid-column: 1 / 2;
+  min-width: 0;
+  overflow: visible; /* use window (body) scroll */
+  /* padding: 1rem; */
+}
+
+@media (min-width: 1024px) {
+  .app { column-gap: 5rem; } 
+  .app {
+    grid-template-columns: var(--sidebar-w, 260px) 1fr;
+    grid-template-rows: var(--topbar-h, 72px) 1fr;
+  }
+  .app-sidebar {
+    display: block;
+    grid-row: 1 / span 2;
+    grid-column: 1 / 2;
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    z-index: 30;
+  }
+  .app-topbar {
+    grid-column: 2 / 3; /* topbar only above main on desktop */
+  }
+  .app-main {
+    grid-column: 2 / 3;
+  }
+}

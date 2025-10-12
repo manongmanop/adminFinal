@@ -3,6 +3,7 @@ import { Card, Badge, Input, Button } from "../components/ui.jsx";
 import { MessageSquare, Filter, Star, ThumbsUp, Flag } from "lucide-react";
 
 import { fetchFeedback } from "../api/client.js";
+import "../css/Feedback.css";
 
 const filterOptions = [
   { value: "all", label: "ทั้งหมด" },
@@ -51,12 +52,17 @@ export default function Feedback() {
   }, []);
 
   const filteredFeedback = useMemo(() => {
+    const q = (query || "").trim().toLowerCase();
     return feedback.filter((item) => {
       const matchesType = filter === "all" || item.targetType === filter;
+      const name = (item.targetName || "").toLowerCase();
+      const comment = (item.comment || "").toLowerCase();
+      const tags = (item.tags || []).map((t) => (t || "").toLowerCase());
       const matchesQuery =
-        item.targetName.toLowerCase().includes(query.toLowerCase()) ||
-        item.comment.toLowerCase().includes(query.toLowerCase()) ||
-        item.tags.some((tag) => tag.toLowerCase().includes(query.toLowerCase()));
+        !q ||
+        name.includes(q) ||
+        comment.includes(q) ||
+        tags.some((tag) => tag.includes(q));
       return matchesType && matchesQuery;
     });
   }, [feedback, filter, query]);
@@ -73,28 +79,33 @@ export default function Feedback() {
   }, [filteredFeedback]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-2xl border border-gray-700 bg-gradient-to-br from-gray-900 to-gray-800 p-6 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400">
+    <div className="feedback-container">
+      <header className="feedback-header">
+        <div className="feedback-header__left">
+          <div className="feedback-icon">
             <MessageSquare size={28} />
           </div>
-          <div>
-            <h1 className="text-2xl font-semibold text-white">ความคิดเห็นและรีวิว</h1>
-            <p className="text-sm text-gray-400">ติดตามเสียงตอบรับจากผู้ใช้ทั้งระดับโปรแกรมและท่าฝึก</p>
+          <div className="feedback-titles">
+            <h1 className="feedback-title">ความคิดเห็นและรีวิว</h1>
+            <p className="feedback-subtitle">ติดตามเสียงตอบรับจากผู้ใช้ทั้งระดับโปรแกรมและท่าฝึก</p>
           </div>
         </div>
-        <div className="grid gap-2 text-sm text-gray-300 md:text-right">
-          <span>รายการทั้งหมด: <span className="font-semibold text-white">{stats.total}</span></span>
-          <span>คะแนนเฉลี่ย: <span className="font-semibold text-emerald-400">{stats.avg}</span></span>
-        </div>
-      </div>
 
-      <div className="flex flex-col gap-4 rounded-2xl border border-gray-700 bg-gray-900/60 p-6 lg:flex-row lg:items-end">
-        <div className="flex-1">
-          <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="feedback-search">
-            ค้นหาความคิดเห็น
-          </label>
+        <div className="feedback-header__right">
+          <div className="feedback-stat">
+            <div className="feedback-stat__label">รายการทั้งหมด</div>
+            <div className="feedback-stat__value">{stats.total}</div>
+          </div>
+          <div className="feedback-stat">
+            <div className="feedback-stat__label">คะแนนเฉลี่ย</div>
+            <div className="feedback-stat__value">{stats.avg}</div>
+          </div>
+        </div>
+      </header>
+
+      <section className="feedback-controls">
+        <div className="feedback-controls__search">
+          <label htmlFor="feedback-search" className="feedback-label">ค้นหาความคิดเห็น</label>
           <Input
             id="feedback-search"
             value={query}
@@ -103,15 +114,14 @@ export default function Feedback() {
             disabled={loading || !!error}
           />
         </div>
-        <div className="w-full lg:w-56">
-          <label className="mb-2 block text-sm font-medium text-gray-300" htmlFor="feedback-filter">
-            ประเภทเนื้อหา
-          </label>
-          <div className="flex items-center gap-2">
-            <Filter size={16} className="text-gray-400" />
+
+        <div className="feedback-controls__filter">
+          <label htmlFor="feedback-filter" className="feedback-label">ประเภทเนื้อหา</label>
+          <div className="feedback-filter-row">
+            <Filter size={16} />
             <select
               id="feedback-filter"
-              className="w-full rounded-xl bg-gray-800 border border-gray-600 px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+              className="feedback-select"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               disabled={loading || !!error}
@@ -124,97 +134,104 @@ export default function Feedback() {
             </select>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-400">ทั้งหมด</div>
-            <MessageSquare size={18} className="text-emerald-400" />
+      <section className="feedback-summary-grid">
+        <Card className="feedback-summary">
+          <div className="summary-left">
+            <div className="summary-label">ทั้งหมด</div>
+            <div className="summary-value">{stats.total}</div>
+            <div className="summary-desc">ความคิดเห็นทั้งหมดที่พบ</div>
           </div>
-          <div className="mt-2 text-2xl font-semibold text-white">{stats.total}</div>
-          <p className="text-xs text-gray-500">ความคิดเห็นทั้งหมดที่พบ</p>
+          <div className="summary-icon"><MessageSquare size={20} /></div>
         </Card>
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-400">โปรแกรม</div>
-            <Star size={18} className="text-yellow-400" />
-          </div>
-          <div className="mt-2 text-2xl font-semibold text-white">{stats.programCount}</div>
-          <p className="text-xs text-gray-500">เฉพาะโปรแกรมออกกำลังกาย</p>
-        </Card>
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-400">ท่าฝึก</div>
-            <ThumbsUp size={18} className="text-sky-400" />
-          </div>
-          <div className="mt-2 text-2xl font-semibold text-white">{stats.exerciseCount}</div>
-          <p className="text-xs text-gray-500">ข้อเสนอแนะสำหรับท่าฝึก</p>
-        </Card>
-      </div>
 
-      {loading ? (
-        <Card className="p-6 text-center text-gray-400">กำลังโหลดความคิดเห็น...</Card>
-      ) : error ? (
-        <Card className="space-y-4 border border-rose-500/40 bg-rose-500/10 p-6 text-center text-rose-100">
-          <p>{error}</p>
-          <Button variant="secondary" onClick={() => window.location.reload()}>
-            ลองใหม่อีกครั้ง
-          </Button>
+        <Card className="feedback-summary">
+          <div className="summary-left">
+            <div className="summary-label">โปรแกรม</div>
+            <div className="summary-value">{stats.programCount}</div>
+            <div className="summary-desc">เฉพาะโปรแกรมออกกำลังกาย</div>
+          </div>
+          <div className="summary-icon"><Star size={20} /></div>
         </Card>
-      ) : feedback.length === 0 ? (
-        <Card className="p-6 text-center text-gray-400">ยังไม่มีความคิดเห็นจากผู้ใช้</Card>
-      ) : (
-        <div className="space-y-4">
-          {filteredFeedback.map((item) => (
-            <Card key={item.id} className="border-gray-700/80 bg-gray-900/70 p-6">
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                <div className="space-y-3">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <Badge variant={item.targetType === "program" ? "success" : "blue"}>
-                      {item.targetType === "program" ? "โปรแกรม" : "ท่าฝึก"}
-                    </Badge>
-                    <h3 className="text-lg font-semibold text-white">{item.targetName}</h3>
-                    <div className="flex items-center gap-1 text-yellow-400">
-                      {Array.from({ length: 5 }).map((_, index) => (
-                        <Star
-                          key={index}
-                          size={16}
-                          fill={index < (item.rating ?? 0) ? "currentColor" : "none"}
-                          strokeWidth={1.5}
-                        />
-                      ))}
+
+        <Card className="feedback-summary">
+          <div className="summary-left">
+            <div className="summary-label">ท่าฝึก</div>
+            <div className="summary-value">{stats.exerciseCount}</div>
+            <div className="summary-desc">ข้อเสนอแนะสำหรับท่าฝึก</div>
+          </div>
+          <div className="summary-icon"><ThumbsUp size={20} /></div>
+        </Card>
+      </section>
+
+      <main className="feedback-main">
+        {loading ? (
+          <Card className="feedback-message">กำลังโหลดความคิดเห็น...</Card>
+        ) : error ? (
+          <Card className="feedback-error">
+            <p>{error}</p>
+            <Button variant="secondary" onClick={() => window.location.reload()}>
+              ลองใหม่อีกครั้ง
+            </Button>
+          </Card>
+        ) : feedback.length === 0 ? (
+          <Card className="feedback-empty">ยังไม่มีความคิดเห็นจากผู้ใช้</Card>
+        ) : (
+          <div className="feedback-list">
+            {filteredFeedback.map((item) => (
+              <Card key={item.id} className="feedback-item">
+                <div className="feedback-item__inner">
+                  <div className="feedback-item__main">
+                    <div className="feedback-item__meta">
+                      <Badge variant={item.targetType === "program" ? "success" : "blue"}>
+                        {item.targetType === "program" ? "โปรแกรม" : "ท่าฝึก"}
+                      </Badge>
+                      <h3 className="feedback-item__title">{item.targetName}</h3>
+                      <div className="feedback-stars">
+                        {Array.from({ length: 5 }).map((_, index) => (
+                          <Star
+                            key={index}
+                            size={16}
+                            className={index < (item.rating ?? 0) ? "star filled" : "star"}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <p className="feedback-item__comment">{item.comment}</p>
+
+                    <div className="feedback-item__meta-row">
+                      <span>โดย {item.user}</span>
+                      <span className="dot">•</span>
+                      <span>{new Date(item.createdAt).toLocaleDateString("th-TH")}</span>
+                      <div className="feedback-tags">
+                        {(item.tags || []).map((tag) => (
+                          <span key={tag} className="feedback-tag">#{tag}</span>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-300">{item.comment}</p>
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
-                    <span>โดย {item.user}</span>
-                    <span>•</span>
-                    <span>{new Date(item.createdAt).toLocaleDateString("th-TH")}</span>
-                    {item.tags.map((tag) => (
-                      <span key={tag} className="rounded-full bg-gray-800 px-3 py-1 text-xs text-gray-300">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-gray-400">
-                  <div className="flex items-center gap-1 text-emerald-400">
-                    <ThumbsUp size={16} /> {item.likes ?? 0}
-                  </div>
-                  <Button variant="ghost" size="sm" className="text-rose-300 hover:text-rose-200">
-                    <Flag size={16} /> รายงาน
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
 
-          {filteredFeedback.length === 0 && (
-            <Card className="p-6 text-center text-gray-400">ไม่พบความคิดเห็นที่ตรงกับการค้นหา</Card>
-          )}
-        </div>
-      )}
+                  <div className="feedback-item__actions">
+                    <div className="likes">
+                      <ThumbsUp size={16} /> <span>{item.likes ?? 0}</span>
+                    </div>
+                    <Button variant="ghost" size="sm" className="report-button">
+                      <Flag size={16} /> รายงาน
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+
+            {filteredFeedback.length === 0 && (
+              <Card className="feedback-no-match">ไม่พบความคิดเห็นที่ตรงกับการค้นหา</Card>
+            )}
+          </div>
+        )}
+      </main>
     </div>
   );
 }
+

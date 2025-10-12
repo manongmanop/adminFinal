@@ -20,6 +20,24 @@ async function fetchExercises(db) {
   return items.map((doc) => normalizeExercise(doc));
 }
 
+async function fetchUsers(db) {
+  const exists = await collectionExists(db, "users");
+  if (!exists) return [];
+  const items = await db.collection("users").find({}).toArray();
+  return items.map((doc) => ({ id: doc._id?.toString?.(), ...doc }));
+}
+
+async function countCollection(db, name) {
+  const exists = await collectionExists(db, name);
+  if (!exists) return 0;
+  try {
+    // countDocuments gives accurate count; fallback to estimatedDocumentCount if needed
+    return await db.collection(name).countDocuments();
+  } catch (e) {
+    return await db.collection(name).estimatedDocumentCount();
+  }
+}
+
 async function fetchPrograms(db, exercises) {
   const exists = await collectionExists(db, "Program");
   if (!exists) return [];
@@ -92,6 +110,17 @@ export async function createServer() {
     }
   });
 
+  app.get("/api/users", async (_req, res) => {
+    try {
+      const db = await getDb();
+      const users = await fetchUsers(db);
+      res.json(users);
+    } catch (error) {
+      console.error("[api] failed to load users", error);
+      res.status(500).json({ message: "ไม่สามารถดึงข้อมูลผู้ใช้งานได้" });
+    }
+  });
+
   app.get("/api/programs", async (_req, res) => {
     try {
       const db = await getDb();
@@ -114,6 +143,23 @@ export async function createServer() {
     } catch (error) {
       console.error("[api] failed to load feedback", error);
       res.status(500).json({ message: "ไม่สามารถดึงข้อมูลความคิดเห็นได้" });
+    }
+  });
+
+  // Return counts for Overview dashboard (programs, exercises, users)
+  app.get("/api/counts", async (_req, res) => {
+    try {
+      const db = await getDb();
+      const [programsCount, exercisesCount, usersCount] = await Promise.all([
+        countCollection(db, "Program"),
+        countCollection(db, "exercises"),
+        countCollection(db, "users"),
+      ]);
+
+      res.json({ programs: programsCount, exercises: exercisesCount, users: usersCount });
+    } catch (error) {
+      console.error("[api] failed to load counts", error);
+      res.status(500).json({ message: "ไม่สามารถดึงสถิติได้" });
     }
   });
 

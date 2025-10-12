@@ -1,15 +1,25 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import "./App.css";
 import Sidebar from "./layouts/Sidebar.jsx";
 import Topbar from "./layouts/Topbar.jsx";
 import Overview from "./pages/Overview.jsx";
 import Programs from "./pages/Programs.jsx";
 import Exercises from "./pages/Exercises.jsx";
-import Settings from "./pages/Settings.jsx";
 import Feedback from "./pages/Feedback.jsx";
 
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+
+  useEffect(() => {
+    const cls = "is-sidebar-open";
+    if (sidebarOpen) {
+      document.body.classList.add(cls);
+    } else {
+      document.body.classList.remove(cls);
+    }
+    return () => document.body.classList.remove(cls);
+  }, [sidebarOpen]);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -19,8 +29,6 @@ export default function App() {
         return <Exercises />;
       case "feedback":
         return <Feedback />;
-      case "settings":
-        return <Settings />;
       case "overview":
       default:
         return <Overview />;
@@ -28,21 +36,21 @@ export default function App() {
   };
 
   return (
-    <div className="w-screen min-h-dvh bg-gray-900 text-gray-100">
-      <div className="grid min-h-dvh grid-cols-1 md:grid-cols-[20rem_1fr]">
+    <div className="app">
+      <aside className="app-sidebar">
         <Sidebar
           open={sidebarOpen}
           setOpen={setSidebarOpen}
           active={activeTab}
           setActive={setActiveTab}
         />
-        <div className="min-w-0 flex flex-col">
-          <Topbar setSidebarOpen={setSidebarOpen} />
-          <main className="flex-1 w-full max-w-none px-4 py-6 md:px-6 overflow-y-auto">
-            {renderContent()}
-          </main>
-        </div>
-      </div>
+      </aside>
+      <header className="app-topbar">
+        <Topbar setSidebarOpen={setSidebarOpen} />
+      </header>
+      <main className="app-main">
+        {renderContent()}
+      </main>
     </div>
   );
 }

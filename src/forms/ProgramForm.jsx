@@ -41,7 +41,7 @@ export default function ProgramForm({ initial, onSubmit }) {
           <Label htmlFor="level">ระดับความยาก</Label>
           <select
             id="level"
-            className="w-full rounded-xl bg-gray-800 border border-gray-600 px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-colors"
+            className="w-full rounded-xl bg-white border border-slate-300 px-4 py-2.5 text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-colors"
             value={values.level}
             onChange={(e) => set("level", e.target.value)}
           >
@@ -55,7 +55,7 @@ export default function ProgramForm({ initial, onSubmit }) {
           <Label htmlFor="goal">เป้าหมาย</Label>
           <select
             id="goal"
-            className="w-full rounded-xl bg-gray-800 border border-gray-600 px-4 py-2.5 text-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-colors"
+            className="w-full rounded-xl bg-white border border-slate-300 px-4 py-2.5 text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-colors"
             value={values.goal}
             onChange={(e) => set("goal", e.target.value)}
           >
@@ -93,3 +93,4 @@ export default function ProgramForm({ initial, onSubmit }) {
     </div>
   );
 }
+

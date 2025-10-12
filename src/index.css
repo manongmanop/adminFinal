@@ -1,8 +1,5 @@
 
-@import "tailwindcss";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Removed Tailwind. Using plain CSS classes defined under src/css */
 
 :root {
   --bg: #ffffff;
@@ -10,8 +7,23 @@
   --text: #0f172a;
   --muted: #6b7280;
   --primary: #0ea5e9;
-  --accent: #f97316;
+  --accent: #3b82f6;
   --focus: 3px rgba(14,165,233,0.18);
+  /* layout variables */
+  --sidebar-w: 260px;
+  --topbar-h: 72px;
+  /* Consistent header + message palette */
+  --header-bg: #ffffff;
+  --header-border: rgba(15,23,42,0.08);
+  --header-shadow: 0 6px 18px rgba(15,23,42,0.06);
+  --message-info-bg: #e8f3ff;
+  --message-info-text: #0b5394;
+  --message-success-bg: #e8f8f0;
+  --message-success-text: #0f5132;
+  --message-warn-bg: #fff7e6;
+  --message-warn-text: #8a6d3b;
+  --message-danger-bg: #ffecec;
+  --message-danger-text: #842029;
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -58,6 +70,20 @@ h1 {
   box-shadow: var(--focus);
   outline: none;
   border-radius: 8px;
+}
+
+/* App root takes full height; scrolling inside main content */
+html, body, #root {
+  height: 100%;
+}
+body {
+  overflow: auto; /* enable window scrollbar */
+}
+
+/* Lock body scroll while sidebar drawer is open */
+body.is-sidebar-open {
+  overflow: hidden;
+  touch-action: none;
 }
 
 /* Helper surface styles used across components */

@@ -28,3 +28,11 @@ export function fetchPrograms() {
 export function fetchFeedback() {
   return request("/feedback");
 }
+
+export function fetchUsers() {
+  return request("/users");
+}
+
+export function fetchCounts() {
+  return request("/counts");
+}
