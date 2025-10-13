@@ -201,34 +201,6 @@ export default function Overview() {
         })}
       </div>
 
-      {/* Activity Stats */}
-      <div className="section">
-        <div className="section__header">
-          <h2 className="section__title">กิจกรรมในวันนี้</h2>
-          <p className="section__subtitle">สถิติการใช้งานและประสิทธิภาพ</p>
-        </div>
-
-        <div className="activity-grid">
-          {activityStats.map((stat, i) => {
-            const IconComponent = stat.icon;
-            return (
-              <Card key={i} className="activity-card">
-                <div className="activity-card__content">
-                  <div className={`activity-card__icon activity-card__icon--${stat.color}`}>
-                    <IconComponent size={20} />
-                  </div>
-                  <div className="activity-card__info">
-                    <div className="activity-card__value">{stat.value}</div>
-                    <div className="activity-card__label">{stat.label}</div>
-                    <div className="activity-card__subtitle">{stat.subtitle}</div>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Quick Overview */}
       <div className="section">
         <div className="section__header">

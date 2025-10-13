@@ -18,7 +18,7 @@ import {
   Users
 } from "lucide-react";
 import "../css/Programs.css";
-import { fetchPrograms } from "../api/client.js";
+import { fetchPrograms, fetchExercises, createProgram, updateProgram, deleteProgram } from "../api/client.js";
 
 const createEmptyProgram = () => ({
   id: `program-${Date.now()}`,
@@ -55,6 +55,274 @@ export default function Programs() {
   const [editingWorkoutId, setEditingWorkoutId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [toasts, setToasts] = useState([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [allExercises, setAllExercises] = useState([]);
+  const [exerciseQuery, setExerciseQuery] = useState("");
+  const [selectedExerciseIds, setSelectedExerciseIds] = useState(new Set());
+  const [dragIndex, setDragIndex] = useState(null);
+
+  // Normalize image URLs: if it's a bare filename, serve from /uploads
+  function resolveImageUrl(src) {
+    if (!src) return '';
+    if (typeof src !== 'string') return '';
+    if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('/')) return src;
+    return `/uploads/${src}`;
+  }
+
+  function handleReorderWorkouts(fromIndex, toIndex) {
+    if (fromIndex === null || toIndex === null || fromIndex === toIndex) return;
+    if (!programForm) return;
+    const list = [...(programForm.workoutList || [])];
+    const [moved] = list.splice(fromIndex, 1);
+    list.splice(toIndex, 0, moved);
+    const updated = { ...programForm, workoutList: list };
+    setProgramForm(updated);
+    setPrograms((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    // Persist order immediately
+    const isObjectId = (id) => typeof id === 'string' && /^[a-f0-9]{24}$/i.test(id);
+    (async () => {
+      try {
+        setLoading(true);
+        const saved = isObjectId(updated.id)
+          ? await updateProgram(updated.id, updated)
+          : await createProgram(updated);
+        setProgramForm(saved);
+        setPrograms((prev) => prev.map((p) => (p.id === saved.id ? saved : p)));
+        setSelectedProgramId(saved.id);
+        pushToast({ type: 'success', title: 'อัปเดตลำดับสำเร็จ' });
+      } catch (e) {
+        console.error(e);
+        pushToast({ type: 'error', title: 'อัปเดตลำดับไม่สำเร็จ' });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }
+
+  // Toast helpers
+  function pushToast({ type = 'info', title = '', message = '' }) {
+    const id = `t-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const toast = { id, type, title, message };
+    setToasts((prev) => [toast, ...prev]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3800);
+  }
+  const dismissToast = (id) => setToasts((prev) => prev.filter((t) => t.id !== id));
+
+  async function openExercisePicker() {
+    try {
+      setPickerOpen(true);
+      if (!allExercises.length) {
+        const data = await fetchExercises();
+        setAllExercises(Array.isArray(data) ? data : []);
+      }
+    } catch (e) {
+      console.error(e);
+      pushToast({ type: 'error', title: 'โหลดท่าออกกำลังกายไม่สำเร็จ' });
+    }
+  }
+
+  function toggleSelectExercise(id) {
+    setSelectedExerciseIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function addSelectedExercisesToProgram() {
+    if (!selectedExerciseIds.size) {
+      setPickerOpen(false);
+      return;
+    }
+    let targetProgram = programForm;
+    if (!targetProgram) {
+      targetProgram = createEmptyProgram();
+      targetProgram.workoutList = [];
+      setProgramForm(targetProgram);
+      setSelectedProgramId(targetProgram.id);
+      setPrograms((prev) => [targetProgram, ...prev]);
+    }
+
+    const byId = new Map((targetProgram.workoutList || []).map((w) => [w.exerciseId || w.id, true]));
+    const toAdd = allExercises
+      .filter((ex) => selectedExerciseIds.has(ex.id) && !byId.has(ex.id))
+      .map((ex) => ({
+        id: `w-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+        exercise: ex.id,
+        name: ex.name,
+        description: ex.description,
+        muscles: ex.muscles || [],
+        type: ex.type === 'time' ? 'time' : 'reps',
+        value: ex.type === 'reps' ? (ex.value ?? "") : "",
+        duration: ex.type === 'time' ? (ex.duration ?? "") : "",
+        image: ex.image,
+        video: ex.video,
+      }));
+
+    const candidate = { ...targetProgram, workoutList: [...(targetProgram.workoutList || []), ...toAdd] };
+
+    try {
+      setLoading(true);
+      const isObjectId = (id) => typeof id === 'string' && /^[a-f0-9]{24}$/i.test(id);
+      let saved;
+      if (!isObjectId(candidate.id)) {
+        saved = await createProgram(candidate);
+      } else {
+        saved = await updateProgram(candidate.id, candidate);
+      }
+
+      // Sync UI with saved program
+      setProgramForm(saved);
+      setPrograms((prev) => {
+        const exists = prev.find((p) => p.id === saved.id);
+        if (exists) return prev.map((p) => (p.id === saved.id ? saved : p));
+        return [saved, ...prev.filter((p) => p.id !== candidate.id)];
+      });
+      setSelectedProgramId(saved.id);
+
+      const addedCount = toAdd.length;
+      pushToast({ type: 'success', title: 'เพิ่มท่าสำเร็จ', message: `เพิ่มท่าออกกำลังกาย ${addedCount} รายการ และบันทึกแล้ว` });
+    } catch (e) {
+      console.error(e);
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาด', message: 'ไม่สามารถเพิ่มและบันทึกท่าได้' });
+    } finally {
+      setSelectedExerciseIds(new Set());
+      setExerciseQuery("");
+      setPickerOpen(false);
+      setLoading(false);
+    }
+  }
+
+  // ---- API-backed CRUD helpers ----
+  const looksLikeObjectId = (id) => typeof id === 'string' && /^[a-f0-9]{24}$/i.test(id);
+
+  async function saveProgram() {
+    if (!programForm) return;
+    const errors = {};
+    if (!programForm.name || programForm.name.trim() === "") {
+      errors.name = "โปรดกรอกชื่อโปรแกรม";
+    }
+    if (Object.keys(errors).length) {
+      setProgramErrors(errors);
+      return;
+    }
+    try {
+      setLoading(true);
+      let saved;
+      if (!looksLikeObjectId(programForm.id)) {
+        saved = await createProgram(programForm);
+      } else {
+        saved = await updateProgram(programForm.id, programForm);
+      }
+      setPrograms((prev) => {
+        const exists = prev.find((p) => p.id === saved.id);
+        if (exists) return prev.map((p) => (p.id === saved.id ? saved : p));
+        return [saved, ...prev.filter((p) => p.id !== programForm.id)];
+      });
+      setSelectedProgramId(saved.id);
+      setProgramForm(saved);
+      setProgramErrors({});
+      pushToast({ type: 'success', title: 'บันทึกสำเร็จ', message: 'บันทึกโปรแกรมเรียบร้อยแล้ว' });
+    } catch (e) {
+      console.error(e);
+      setProgramErrors({ general: 'บันทึกโปรแกรมไม่สำเร็จ' });
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาด', message: 'ไม่สามารถบันทึกโปรแกรมได้' });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function deleteProgramApi(id) {
+    try {
+      if (looksLikeObjectId(id)) {
+        await deleteProgram(id);
+      }
+      setPrograms((prev) => prev.filter((p) => p.id !== id));
+      if (selectedProgramId === id) {
+        setSelectedProgramId(null);
+        setProgramForm(null);
+      }
+      pushToast({ type: 'success', title: 'ลบสำเร็จ', message: 'ลบโปรแกรมเรียบร้อยแล้ว' });
+    } catch (e) {
+      console.error(e);
+      setError('ลบโปรแกรมไม่สำเร็จ');
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาด', message: 'ไม่สามารถลบโปรแกรมได้' });
+    }
+  }
+
+  async function saveWorkout() {
+    const errors = {};
+    if (!workoutForm.name || workoutForm.name.trim() === "") {
+      errors.name = "โปรดกรอกชื่องานฝึก (workout)";
+    }
+    if (workoutForm.type === "reps") {
+      if (!workoutForm.value) errors.value = "โปรดกรอกจำนวนครั้ง (reps)";
+    } else {
+      if (!workoutForm.duration) errors.duration = "โปรดกรอกระยะเวลา (duration)";
+    }
+    if (Object.keys(errors).length) {
+      setWorkoutErrors(errors);
+      return;
+    }
+
+    const muscles = (workoutForm.musclesText || "")
+      .split(",")
+      .map((m) => m.trim())
+      .filter(Boolean);
+
+    const workoutToSave = {
+      ...workoutForm,
+      id: workoutForm.id || `w-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+      muscles,
+    };
+
+    let updatedProgram = programForm ? { ...programForm } : null;
+    if (!updatedProgram) {
+      const newProgram = createEmptyProgram();
+      newProgram.workoutList = [workoutToSave];
+      updatedProgram = newProgram;
+    } else {
+      const existingIndex = (updatedProgram.workoutList || []).findIndex((w) => w.id === workoutToSave.id);
+      if (existingIndex > -1) {
+        updatedProgram.workoutList = updatedProgram.workoutList.map((w) => (w.id === workoutToSave.id ? workoutToSave : w));
+      } else {
+        updatedProgram.workoutList = [...(updatedProgram.workoutList || []), workoutToSave];
+      }
+    }
+
+    try {
+      setLoading(true);
+      let saved;
+      if (!looksLikeObjectId(updatedProgram.id)) {
+        saved = await createProgram(updatedProgram);
+      } else {
+        saved = await updateProgram(updatedProgram.id, updatedProgram);
+      }
+      setProgramForm(saved);
+      setPrograms((prev) => {
+        const exists = prev.find((p) => p.id === saved.id);
+        if (exists) return prev.map((p) => (p.id === saved.id ? saved : p));
+        return [saved, ...prev.filter((p) => p.id !== updatedProgram.id)];
+      });
+      setSelectedProgramId(saved.id);
+      setEditingWorkoutId(null);
+      setWorkoutForm(emptyWorkoutForm());
+      setWorkoutErrors({});
+      pushToast({ type: 'success', title: 'บันทึกสำเร็จ', message: 'บันทึกท่าออกกำลังกายเรียบร้อยแล้ว' });
+    } catch (e) {
+      console.error(e);
+      setWorkoutErrors({ general: 'บันทึกท่าออกกำลังกายไม่สำเร็จ' });
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาด', message: 'ไม่สามารถบันทึกท่าออกกำลังกายได้' });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Simple mode: show only the full programs list (no editor/forms/stats)
+  const simpleListOnly = false;
 
   // Load programs from API (or fallback empty)
   useEffect(() => {
@@ -257,8 +525,117 @@ export default function Programs() {
     setWorkoutErrors({});
   }
 
+  // Early return for simple list-only view
+  if (simpleListOnly) {
+    return (
+      <div className="programs">
+        {loading ? (
+          <Card className="programs__loading">
+            <div className="loading-spinner"></div>
+            <p>Loading programs...</p>
+          </Card>
+        ) : error ? (
+          <Card className="programs__error">
+            <p>{error}</p>
+          </Card>
+        ) : (
+          <div className="programs__content">
+            <div className="programs__list">
+              <h2 className="programs__list-title">All Programs</h2>
+              {programs.map((program) => (
+                <Card key={program.id} className="program-item">
+                  <div className="program-item__header">
+                    <div className="program-item__info">
+                      <h3 className="program-item__name">{program.name}</h3>
+                      <p className="program-item__description">{program.description}</p>
+                      <div className="program-item__meta">
+                        <span className="program-item__meta-item">
+                          <Clock size={14} />
+                          {program.duration || "-"}
+                        </span>
+                        <span className="program-item__meta-item">
+                          <Flame size={14} />
+                          {program.caloriesBurned} kcal
+                        </span>
+                        <span className="program-item__meta-item">
+                          <Target size={14} />
+                          {program.category || "-"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="programs">
+      {/* Toasts */}
+      <div className="toast-container">
+        {toasts.map((t) => (
+          <div key={t.id} className={`toast toast--${t.type}`}>
+            <h4 className="toast__title">{t.title}</h4>
+            <button className="toast__close" onClick={() => dismissToast(t.id)} aria-label="Dismiss">×</button>
+            {t.message && <p className="toast__message">{t.message}</p>}
+          </div>
+        ))}
+      </div>
+
+      {/* Exercise Picker Modal */}
+      {pickerOpen && (
+        <div className="modal">
+          <div className="modal__overlay" onClick={() => setPickerOpen(false)} />
+          <div className="modal__dialog" style={{ maxWidth: '900px', width: '100%' }}>
+            <div className="modal__header">
+              <h3 className="modal__title">เลือกท่าออกกำลังกายจากฐานข้อมูล</h3>
+              <button className="modal__close" onClick={() => setPickerOpen(false)}>×</button>
+            </div>
+            <div className="modal__body">
+              <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
+                <input
+                  className="input"
+                  placeholder="ค้นหาตามชื่อท่า..."
+                  value={exerciseQuery}
+                  onChange={(e) => setExerciseQuery(e.target.value)}
+                />
+                <span className="badge badge--gray">ทั้งหมด {allExercises.length}</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px' }}>
+                {allExercises
+                  .filter((ex) => (exerciseQuery ? (ex.name || '').toLowerCase().includes(exerciseQuery.toLowerCase()) : true))
+                  .map((ex) => {
+                    const selected = selectedExerciseIds.has(ex.id);
+                    return (
+                      <div key={ex.id} className={`card ${selected ? 'program-item--active' : ''}`} style={{ cursor: 'pointer' }} onClick={() => toggleSelectExercise(ex.id)}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '.5rem' }}>
+                          <h4 style={{ margin: 0 }}>{ex.name}</h4>
+                          <input type="checkbox" checked={selected} readOnly />
+                        </div>
+                        <div style={{ fontSize: '.85rem', color: '#64748b' }}>{ex.type === 'time' ? `เวลา: ${ex.duration ?? '-'}` : `ครั้ง: ${ex.value ?? '-'}`}</div>
+                        {Array.isArray(ex.muscles) && ex.muscles.length > 0 && (
+                          <div style={{ marginTop: '.5rem', display: 'flex', flexWrap: 'wrap', gap: '.25rem' }}>
+                            {ex.muscles.map((m) => (
+                              <span key={m} className="badge badge--blue">{m}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '.5rem', padding: '0 1.5rem 1.25rem' }}>
+              <button className="btn btn--secondary" onClick={() => setPickerOpen(false)}>ยกเลิก</button>
+              <button className="btn btn--primary" onClick={addSelectedExercisesToProgram}>บันทึกการเลือก</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="programs__header">
         <div className="programs__header-content">
@@ -394,7 +771,7 @@ export default function Programs() {
                     className="program-item__delete"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDeleteProgram(program.id);
+                      deleteProgramApi(program.id);
                     }}
                   >
                     <Trash2 size={16} />
@@ -429,13 +806,80 @@ export default function Programs() {
           <div className="programs__details">
             {programForm ? (
               <>
+                {/* Program Preview Image */}
+                <Card className="program-form" style={{ marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div style={{ width: 160, height: 100, borderRadius: 12, overflow: 'hidden', background: '#f1f5f9', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {(() => {
+                        const fallbackImage = (programForm.workoutList || []).find(w => w?.image)?.image || '';
+                        const raw = programForm.image || fallbackImage || '';
+                        const src = resolveImageUrl(raw);
+                        return src ? (
+                          <img src={src} alt="program preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <span style={{ color: '#94a3b8', fontSize: 12 }}>ไม่มีภาพตัวอย่าง</span>
+                        );
+                      })()}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label className="form-label" htmlFor="program-image">ลิงก์ภาพโปรแกรม (URL)</label>
+                      <Input
+                        id="program-image"
+                        value={programForm.image || ''}
+                        onChange={(e) => handleProgramFieldChange('image', e.target.value)}
+                        placeholder="https://example.com/preview.jpg"
+                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', marginTop: '.5rem' }}>
+                        <label className="btn btn--secondary" style={{ cursor: 'pointer' }}>
+                          อัปโหลดรูปภาพ
+                          <input
+                            type="file"
+                            accept="image/*"
+                            style={{ display: 'none' }}
+                            onChange={async (e) => {
+                              try {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                const fd = new FormData();
+                                fd.append('file', file);
+                                const resp = await fetch('/api/upload', { method: 'POST', body: fd });
+                                if (!resp.ok) throw new Error('upload failed');
+                                const data = await resp.json();
+                                const url = data?.url;
+                                if (!url) throw new Error('no url');
+                                // Set image then persist program immediately
+                                const next = { ...programForm, image: url };
+                                setProgramForm(next);
+                                const isObjectId = (id) => typeof id === 'string' && /^[a-f0-9]{24}$/i.test(id);
+                                const saved = isObjectId(next.id) ? await updateProgram(next.id, next) : await createProgram(next);
+                                setProgramForm(saved);
+                                setPrograms((prev) => prev.map((p) => (p.id === saved.id ? saved : p)));
+                                setSelectedProgramId(saved.id);
+                                pushToast({ type: 'success', title: 'อัปโหลดรูปสำเร็จ' });
+                              } catch (err) {
+                                console.error(err);
+                                pushToast({ type: 'error', title: 'อัปโหลดรูปไม่สำเร็จ' });
+                              } finally {
+                                e.target.value = '';
+                              }
+                            }}
+                          />
+                        </label>
+                        <span className="badge badge--gray">หรือใส่ URL แล้วบันทึก</span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
                 {/* Program Form */}
                 <Card className="program-form">
                   <div className="program-form__header">
                     <h2 className="program-form__title">รายละเอียดโปรแกรม</h2>
-                    <Button onClick={handleSaveProgram}>
+                    <Button onClick={saveProgram}>
                       <Save size={16} />
                       <span>บันทึกข้อมูล</span>
+                    </Button>
+                    <Button onClick={openExercisePicker}>
+                      เลือกจากฐานข้อมูล
                     </Button>
                   </div>
 
@@ -536,8 +980,15 @@ export default function Programs() {
                   </div>
 
                   <div className="workout-list__grid">
-                    {programForm.workoutList.map((workout) => (
-                      <Card key={workout.id} className="workout-card">
+                    {programForm.workoutList.map((workout, idx) => (
+                      <Card
+                        key={workout.id}
+                        className="workout-card"
+                        draggable
+                        onDragStart={() => setDragIndex(idx)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={() => handleReorderWorkouts(dragIndex, idx)}
+                      >
                         <div className="workout-card__header">
                           <div className="workout-card__info">
                             <h3 className="workout-card__name">{workout.name}</h3>
@@ -759,7 +1210,7 @@ export default function Programs() {
                       >
                         รีเซ็ต
                       </Button>
-                      <Button onClick={handleSaveWorkout}>
+                      <Button onClick={saveWorkout}>
                         <Save size={16} />
                         <span>
                           {editingWorkoutId ? "อัปเดตชุดโปรแกรม" : "เพิ่มชุดโปรแกรม"}

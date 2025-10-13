@@ -25,6 +25,26 @@ export function fetchPrograms() {
   return request("/programs");
 }
 
+export function createProgram(data) {
+  return request("/programs", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateProgram(id, data) {
+  return request(`/programs/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteProgram(id) {
+  return request(`/programs/${id}`, {
+    method: "DELETE",
+  });
+}
+
 export function fetchFeedback() {
   return request("/feedback");
 }
