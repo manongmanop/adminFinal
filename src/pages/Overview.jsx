@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { Card } from "../components/ui.jsx";
-import { 
-  Dumbbell, 
-  Users, 
-  Settings, 
-  TrendingUp, 
-  Activity, 
+import {
+  Dumbbell,
+  Users,
+  Settings,
+  Activity,
   Target,
   Award,
   BarChart3,
   Clock,
-  Zap,
-  CheckCircle2
+  Zap
 } from "lucide-react";
 import "../css/Overview.css";
 import { fetchCounts } from "../api/client";
@@ -59,8 +57,6 @@ export default function Overview() {
       icon: Dumbbell, 
       color: "emerald",
       bgGradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-      trend: "+12%",
-      description: "เพิ่มขึ้นจากเดือนที่แล้ว"
     },
     { 
       label: "ท่าฝึกในระบบ", 
@@ -68,8 +64,6 @@ export default function Overview() {
       icon: Settings, 
       color: "blue",
       bgGradient: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-      trend: "+8%",
-      description: "ท่าฝึกใหม่ที่เพิ่มเข้ามา"
     },
     { 
       label: "ผู้ใช้งาน", 
@@ -77,8 +71,6 @@ export default function Overview() {
       icon: Users, 
       color: "purple",
       bgGradient: "linear-gradient(135deg, #a855f7 0%, #9333ea 100%)",
-      trend: "+24%",
-      description: "ผู้ใช้งานที่ลงทะเบียนใหม่"
     },
   ];
 
@@ -117,18 +109,18 @@ export default function Overview() {
     { 
       label: "โปรแกรมยอดนิยม", 
       value: "HIIT Training",
-      icon: TrendingUp,
+      icon: Award,
       color: "emerald"
     },
     { 
-      label: "ท่าฝึกที่ใช้มากที่สุด", 
+      label: "ท่าฝึกนิยมที่สุด", 
       value: "Push-ups",
       icon: Zap,
       color: "blue"
     },
     { 
-      label: "เวลาเฉลี่ยต่อเซสชัน", 
-      value: "45 นาที",
+      label: "เวลาเฉลี่ยต่อโปรแกรม", 
+      value: "10 นาที",
       icon: Clock,
       color: "purple"
     }
@@ -155,10 +147,10 @@ export default function Overview() {
             </p>
           </div>
         </div>
-        <div className="overview__header-badge">
+        {/* <div className="overview__header-badge">
           <div className="overview__status-dot"></div>
           <span>ระบบทำงานปกติ</span>
-        </div>
+        </div> */}
       </div>
 
       {/* Main Stats Grid */}
@@ -166,8 +158,8 @@ export default function Overview() {
         {mainStats.map((stat, i) => {
           const IconComponent = stat.icon;
           const numericValue = typeof stat.value === 'number' ? stat.value : Number(stat.value);
-          const noData = !Number.isFinite(numericValue) || numericValue <= 0;
-          const descText = noData ? "ไม่มีข้อมูล" : stat.description;
+          const displayValue = Number.isFinite(numericValue) ? numericValue : 0;
+
           return (
             <Card 
               key={i} 
@@ -177,24 +169,11 @@ export default function Overview() {
               <div className="stat-card__header">
                 <div className="stat-card__label-container">
                   <p className="stat-card__label">{stat.label}</p>
-                  {!noData && (
-                    <div className={`stat-card__trend stat-card__trend--${stat.color}`}>
-                      <TrendingUp size={14} />
-                      <span>{stat.trend}</span>
-                    </div>
-                  )}
-                </div>
-                <div 
-                  className="stat-card__icon"
-                  style={{ background: stat.bgGradient }}
-                >
-                  <IconComponent size={24} />
                 </div>
               </div>
               
               <div className="stat-card__body">
-                <p className="stat-card__value">{Number.isFinite(numericValue) ? numericValue : 0}</p>
-                <p className="stat-card__description">{descText}</p>
+                <p className="stat-card__value">{displayValue}</p>
               </div>
             </Card>
           );
@@ -205,7 +184,6 @@ export default function Overview() {
       <div className="section">
         <div className="section__header">
           <h2 className="section__title">ข้อมูลสรุป</h2>
-          <p className="section__subtitle">ข้อมูลสำคัญที่ควรทราบ</p>
         </div>
         
         <div className="quick-grid">
@@ -224,38 +202,6 @@ export default function Overview() {
             );
           })}
         </div>
-      </div>
-
-      {/* Performance Indicators */}
-      <div className="section">
-        <Card className="performance-card">
-          <div className="performance-card__header">
-            <h3 className="performance-card__title">ประสิทธิภาพระบบ</h3>
-            <div className="performance-card__status">
-              <div className="performance-card__status-dot"></div>
-              <span>ดีเยี่ยม</span>
-            </div>
-          </div>
-          
-          <div className="performance-card__metrics">
-            {performanceMetrics.map((metric, i) => (
-              <div key={i} className="metric">
-                <div className="metric__info">
-                  <div className="metric__label">{metric.label}</div>
-                  <div className="metric__value">{metric.value}%</div>
-                </div>
-                <div className="metric__bar">
-                  <div 
-                    className={`metric__fill metric__fill--${metric.color}`}
-                    style={{ width: `${metric.value}%` }}
-                  >
-                    <div className="metric__fill-shine"></div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
       </div>
     </div>
   );

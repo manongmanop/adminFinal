@@ -740,6 +740,109 @@
   padding-top: 1.5rem;
   border-top: 2px solid #f1f5f9;
 }
+.confirm-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+}
+
+.confirm-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.confirm-card {
+  position: relative;
+  width: 420px;
+  max-width: calc(100vw - 2rem);
+  padding: 1rem;
+}
+
+.confirm-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-bottom: .5rem;
+}
+
+.confirm-card__title {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.confirm-card__close {
+  border: 0;
+  background: transparent;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: .8;
+}
+
+.confirm-card__message {
+  color: #475569;
+  margin: .25rem 0 1rem;
+}
+
+.confirm-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: .5rem;
+}
+.exercise-card {
+  position: relative;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: #fff;
+  cursor: pointer;
+  transition: box-shadow .15s ease, border-color .15s ease, transform .02s ease;
+  text-align: center;
+}
+
+.exercise-card:hover {
+  border-color: #cbd5e1;
+}
+
+.exercise-card--selected {
+  border-color: #2563eb;              /* น้ำเงิน */
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, .18);
+}
+
+.exercise-card__check {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  pointer-events: none;                /* คลิกที่ card แทน */
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb;              /* สีติ๊กถูก */
+}
+
+.exercise-card__title {
+  margin: 6px 0 2px;
+  font-weight: 700;
+}
+
+.exercise-card__meta {
+  font-size: .9rem;
+  color: #64748b;
+}
+
+.exercise-card__tags {
+  margin-top: .5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem;
+  justify-content: center;
+}
+
+
 
 /* Responsive Design */
 @media (max-width: 1200px) {

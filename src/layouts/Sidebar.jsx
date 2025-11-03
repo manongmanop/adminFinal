@@ -21,9 +21,9 @@ const NavItem = ({ icon: Icon, label, active, onClick, badge }) => (
 export default function Sidebar({ open, setOpen, active, setActive }) {
   const items = [
     { key: "overview", icon: LayoutDashboard, label: "สรุปภาพรวมระบบ" },
-    { key: "programs", icon: Dumbbell, label: "โปรแกรมออกกำลังกาย", badge: "6" },
-    { key: "exercises", icon: ListChecks, label: "ท่าฝึกทั้งหมด", badge: "12" },
-    { key: "feedback", icon: MessageSquare, label: "ความคิดเห็นผู้ใช้", badge: "32" }
+    { key: "programs", icon: Dumbbell, label: "โปรแกรมออกกำลังกาย", badge: "" },
+    { key: "exercises", icon: ListChecks, label: "ท่าฝึกทั้งหมด", badge: "" },
+    { key: "feedback", icon: MessageSquare, label: "ความคิดเห็นผู้ใช้", badge: "" }
   ];
 
   return (

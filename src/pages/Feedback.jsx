@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Card, Badge, Input, Button } from "../components/ui.jsx";
-import { MessageSquare, Filter, Star, ThumbsUp, Flag } from "lucide-react";
+import { MessageSquare, Filter, Star, ThumbsUp, Flag, Smile, Meh, Frown } from "lucide-react";
 
 import { fetchFeedback } from "../api/client.js";
 import "../css/Feedback.css";
@@ -9,6 +9,75 @@ const filterOptions = [
   { value: "all", label: "ทั้งหมด" },
   { value: "program", label: "เฉพาะโปรแกรม" },
   { value: "exercise", label: "เฉพาะท่าฝึก" },
+];
+
+// Mock data
+const mockFeedbackData = [
+  {
+    id: 1,
+    targetType: "exercise",
+    targetName: "ยกดัมเบล",
+    rating: 4,
+    comment: "ท่านี้ดีมาก ช่วยสร้างกล้ามเนื้อแขนได้ดี",
+    user: "สมชาย ใจดี",
+    createdAt: "2024-10-20T10:30:00",
+    tags: ["แขน", "ดัมเบล"],
+    likes: 12,
+    sentimentData: { easy: 3, medium: 6, hard: 1 },
+    imageUrl: "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=400&h=400&fit=crop"
+  },
+  {
+    id: 2,
+    targetType: "exercise",
+    targetName: "ดันพื้น",
+    rating: 5,
+    comment: "ท่าฝึกที่ดีเยี่ยม เหมาะสำหรับมือใหม่",
+    user: "วิไล สวยงาม",
+    createdAt: "2024-10-22T14:20:00",
+    tags: ["หน้าอก", "พื้นฐาน"],
+    likes: 8,
+    sentimentData: { easy: 6, medium: 6, hard: 4 },
+    imageUrl: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=400&fit=crop"
+  },
+  {
+    id: 3,
+    targetType: "program",
+    targetName: "โปรแกรมลดน้ำหนัก 30 วัน",
+    rating: 5,
+    comment: "โปรแกรมนี้ช่วยลดน้ำหนักได้จริง แนะนำเลยค่ะ",
+    user: "มานี รักสุขภาพ",
+    createdAt: "2024-10-23T09:15:00",
+    tags: ["ลดน้ำหนัก", "คาร์ดิโอ"],
+    likes: 25,
+    sentimentData: { easy: 2, medium: 8, hard: 5 },
+    imageUrl: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=400&fit=crop"
+  },
+  {
+    id: 4,
+    targetType: "program",
+    targetName: "สร้างกล้ามเนื้อ 8 สัปดาห์",
+    rating: 4,
+    comment: "โปรแกรมดีมาก เห็นผลชัดเจน",
+    user: "ประยุทธ์ แข็งแรง",
+    createdAt: "2024-10-24T16:45:00",
+    tags: ["กล้ามเนื้อ", "ยกน้ำหนัก"],
+    likes: 18,
+    sentimentData: { easy: 1, medium: 4, hard: 8 },
+    imageUrl: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=400&fit=crop"
+  },
+  {
+    id: 5,
+    targetType: "exercise",
+    targetName: "สควอท",
+    rating: 5,
+    comment: "ท่านี้ดีสำหรับขาและสะโพก",
+    user: "สุดา ฟิต",
+    createdAt: "2024-10-25T08:00:00",
+    tags: ["ขา", "สะโพก"],
+    likes: 15,
+    sentimentData: { easy: 4, medium: 5, hard: 3 },
+    imageUrl: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=400&h=400&fit=crop"
+  }
 ];
 
 export default function Feedback() {
@@ -23,22 +92,25 @@ export default function Feedback() {
     setLoading(true);
     setError(null);
 
+    // Try to fetch real data, fallback to mock data
     fetchFeedback()
       .then((data) => {
         if (cancelled) return;
-        const normalized = Array.isArray(data)
+        const normalized = Array.isArray(data) && data.length > 0
           ? data.map((item) => ({
               ...item,
               tags: Array.isArray(item.tags) ? item.tags : [],
+              sentimentData: item.sentimentData || { easy: 3, medium: 6, hard: 1 },
+              imageUrl: item.imageUrl || null,
             }))
-          : [];
+          : mockFeedbackData;
         setFeedback(normalized);
       })
       .catch((err) => {
         if (cancelled) return;
-        console.error("ไม่สามารถดึงข้อมูลความคิดเห็น", err);
-        setError("ไม่สามารถโหลดความคิดเห็นได้ กรุณาลองใหม่อีกครั้ง");
-        setFeedback([]);
+        console.warn("ใช้ mock data แทน:", err);
+        // Use mock data on error
+        setFeedback(mockFeedbackData);
       })
       .finally(() => {
         if (!cancelled) {
@@ -77,6 +149,56 @@ export default function Feedback() {
     const exerciseCount = filteredFeedback.filter((item) => item.targetType === "exercise").length;
     return { total, avg: avg.toFixed(1), programCount, exerciseCount };
   }, [filteredFeedback]);
+
+  const renderSentimentBars = (sentimentData) => {
+    const maxValue = Math.max(sentimentData.easy, sentimentData.medium, sentimentData.hard, 1);
+
+    return (
+      <div className="sentiment-bars">
+        <div className="sentiment-row">
+          <div className="sentiment-icon happy">
+            <Smile size={24} />
+          </div>
+          <div className="sentiment-label">ง่าย</div>
+          <div className="sentiment-bar-container">
+            <div 
+              className="sentiment-bar easy" 
+              style={{ width: `${(sentimentData.easy / maxValue) * 100}%` }}
+            />
+          </div>
+          <div className="sentiment-count">{sentimentData.easy}</div>
+        </div>
+
+        <div className="sentiment-row">
+          <div className="sentiment-icon neutral">
+            <Meh size={24} />
+          </div>
+          <div className="sentiment-label">ปานกลาง</div>
+          <div className="sentiment-bar-container">
+            <div 
+              className="sentiment-bar medium" 
+              style={{ width: `${(sentimentData.medium / maxValue) * 100}%` }}
+            />
+          </div>
+          <div className="sentiment-count">{sentimentData.medium}</div>
+        </div>
+
+        <div className="sentiment-row">
+          <div className="sentiment-icon sad">
+            <Frown size={24} />
+          </div>
+          <div className="sentiment-label">ยากมาก</div>
+          <div className="sentiment-bar-container">
+            <div 
+              className="sentiment-bar hard" 
+              style={{ width: `${(sentimentData.hard / maxValue) * 100}%` }}
+            />
+          </div>
+          <div className="sentiment-count">{sentimentData.hard}</div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="feedback-container">
@@ -118,7 +240,6 @@ export default function Feedback() {
         <div className="feedback-controls__filter">
           <label htmlFor="feedback-filter" className="feedback-label">ประเภทเนื้อหา</label>
           <div className="feedback-filter-row">
-            <Filter size={16} />
             <select
               id="feedback-filter"
               className="feedback-select"
@@ -182,45 +303,25 @@ export default function Feedback() {
             {filteredFeedback.map((item) => (
               <Card key={item.id} className="feedback-item">
                 <div className="feedback-item__inner">
+                  {item.imageUrl && (
+                    <img 
+                      src={item.imageUrl} 
+                      alt={item.targetName}
+                      className="feedback-item__image"
+                    />
+                  )}
+                  
                   <div className="feedback-item__main">
-                    <div className="feedback-item__meta">
-                      <Badge variant={item.targetType === "program" ? "success" : "blue"}>
-                        {item.targetType === "program" ? "โปรแกรม" : "ท่าฝึก"}
-                      </Badge>
-                      <h3 className="feedback-item__title">{item.targetName}</h3>
-                      <div className="feedback-stars">
-                        {Array.from({ length: 5 }).map((_, index) => (
-                          <Star
-                            key={index}
-                            size={16}
-                            className={index < (item.rating ?? 0) ? "star filled" : "star"}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    <p className="feedback-item__comment">{item.comment}</p>
-
-                    <div className="feedback-item__meta-row">
-                      <span>โดย {item.user}</span>
-                      <span className="dot">•</span>
-                      <span>{new Date(item.createdAt).toLocaleDateString("th-TH")}</span>
-                      <div className="feedback-tags">
-                        {(item.tags || []).map((tag) => (
-                          <span key={tag} className="feedback-tag">#{tag}</span>
-                        ))}
-                      </div>
-                    </div>
+                    <h3 className="feedback-item__title">{item.targetName}</h3>
+                    
+                    {item.sentimentData && renderSentimentBars(item.sentimentData)}
                   </div>
 
-                  <div className="feedback-item__actions">
-                    <div className="likes">
-                      <ThumbsUp size={16} /> <span>{item.likes ?? 0}</span>
-                    </div>
-                    <Button variant="ghost" size="sm" className="report-button">
-                      <Flag size={16} /> รายงาน
+                  {/* <div className="feedback-item__actions">
+                    <Button variant="primary" className="feedback-button">
+                      Feedback
                     </Button>
-                  </div>
+                  </div> */}
                 </div>
               </Card>
             ))}
@@ -234,4 +335,3 @@ export default function Feedback() {
     </div>
   );
 }
-

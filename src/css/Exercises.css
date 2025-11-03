@@ -162,7 +162,6 @@
   font-size: 2.25rem;
   font-weight: 800;
   color: var(--exercises-text);
-  margin: 0 0 0.5rem;
   line-height: 1;
 }
 
@@ -218,10 +217,13 @@
   transform: translateY(-50%);
   color: var(--exercises-text-muted);
   pointer-events: none;
+  z-index: 1;
 }
 
 .filter-input {
-  padding-left: 2.75rem !important;
+  width: 80%;
+  padding-left: .75rem + 1.5rem; /* icon size + spacing */
+  padding-right: 0.875rem;
 }
 
 .filter-select-wrapper {
@@ -560,6 +562,158 @@
   color: var(--exercises-text-muted);
   margin: 0;
 }
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(15, 23, 42, 0.45); /* slate-900/45 */
+  backdrop-filter: blur(2px);
+  z-index: 60;
+}
+.modal-card {
+  position: fixed; inset: 0;
+  margin: auto;
+  width: min(760px, 92vw);
+  max-height: 90vh;
+  overflow: auto;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(2, 6, 23, 0.2);
+  z-index: 61;
+  display: flex; flex-direction: column;
+  animation: riseIn 160ms ease-out;
+}
+.modal-card--sm { width: min(420px, 92vw); }
+
+.modal-card__header { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; }
+.modal-card__body   { padding: 18px 20px; }
+.modal-card__footer { padding: 12px 20px; border-top: 1px solid #e2e8f0; display: flex; gap: 8px; justify-content: flex-end; }
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+}
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-col-span-2 { grid-column: span 2; }
+.muscle-checkboxes {
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+.checkbox-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border-radius: 999px;
+  background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0;
+  font-size: 13px;
+}
+.checkbox-chip input { accent-color: #2563eb; }
+
+/* ===== Center Notice Card Box ===== */
+.notice-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  z-index: 70;
+}
+
+.notice-card {
+  position: fixed; inset: 0; margin: auto;
+  width: min(520px, 90vw);
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 24px 70px rgba(2, 6, 23, 0.28);
+  z-index: 71;
+  padding: 18px 20px;
+  display: grid; grid-template-columns: auto 1fr auto; gap: 12px;
+  align-items: center;
+  animation: popIn 160ms ease-out;
+  border: 1px solid #e2e8f0;
+}
+.notice-card--success { border-left: 6px solid #10b981; }
+.notice-card--error   { border-left: 6px solid #ef4444; }
+
+.notice-card__icon { display: flex; align-items: center; justify-content: center; }
+.notice-card__title { margin: 0; font-size: 16px; font-weight: 700; color: #0f172a; }
+.notice-card__message { margin: 4px 0 0; color: #334155; font-size: 14px; }
+
+@keyframes popIn {
+  from { transform: translateY(6px) scale(.98); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes riseIn {
+  from { transform: translateY(10px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+/* small helper for detail actions */
+.detail-actions {
+  margin-top: 12px;
+  display: flex; gap: 8px; justify-content: flex-end;
+}
+/* ===== Upload UI ===== */
+.upload-row {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.upload-hint {
+  color: #64748b; /* slate-500 */
+  font-size: 12px;
+}
+
+/* ===== Readonly image (ใน details) ===== */
+.image-frame {
+  margin-top: .5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f8fafc;
+  width: 100%;
+  max-width: 380px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.image-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.image-placeholder {
+  color: #94a3b8;   /* slate-400 */
+  font-size: 12px;
+}
+
+/* ===== Editable preview (ใน modal) ===== */
+.preview-box {
+  margin-top: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f8fafc;
+  width: 100%;
+  max-width: 320px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ===== Video preview ===== */
+.video-preview {
+  margin-top: 8px;
+  width: 100%;
+  max-width: 420px;
+  border-radius: 12px;
+  outline: none;
+  border: 1px solid #e2e8f0;
+}
+
+/* ===== Modal/Notice/Checkbox styles (ถ้ายังไม่มี ให้คงไว้จากชุดก่อน) ===== */
+/* คุณมี modal-backdrop, modal-card*, notice-card*, checkbox-chip ฯลฯ อยู่แล้ว
+   ถ้ายังไม่ได้ใส่จากรอบก่อน ให้คัดลอกชุด modal/notice/checkbox จากที่ผมให้ไปก่อนหน้านี้มาวางต่อท้ายด้วย */
 
 /* ===================================
    Responsive Design

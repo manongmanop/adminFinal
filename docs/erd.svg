@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+  <defs>
+    <style>
+      .title { font: 700 24px 'Segoe UI', Arial, sans-serif; fill: #111827; }
+      .entity-title { font: 700 16px 'Segoe UI', Arial, sans-serif; fill: #111827; }
+      .attr { font: 400 13px 'Segoe UI', Arial, sans-serif; fill: #111827; }
+      .note { font: 400 12px 'Segoe UI', Arial, sans-serif; fill: #374151; }
+      .box { fill: #ffffff; stroke: #111827; stroke-width: 1.2; rx: 8; ry: 8; }
+      .header { fill: #f3f4f6; stroke: #111827; stroke-width: 1.2; rx: 8; ry: 8; }
+      .line { stroke: #111827; stroke-width: 1.3; }
+      .dash { stroke-dasharray: 6 6; }
+      .label { font: 600 12px 'Segoe UI', Arial, sans-serif; fill: #111827; }
+      .small { font: 400 11px 'Segoe UI', Arial, sans-serif; fill: #374151; }
+      marker#arrow { markerWidth: 10; markerHeight: 10; refX: 7; refY: 3; orient: auto; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="7" refY="3" markerUnits="strokeWidth"
+            markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L0,6 L7,3 z" fill="#111827" />
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="40" y="46" class="title">Fitness Admin – ER Diagram</text>
+  <text x="40" y="70" class="small">Conceptual ERD matching current MongoDB schema (Programs, Exercises, Users, Feedback)</text>
+
+  <!-- Entity: Program -->
+  <g transform="translate(60,120)">
+    <rect class="box" x="0" y="0" width="320" height="220" />
+    <rect class="header" x="0" y="0" width="320" height="36" />
+    <text class="entity-title" x="14" y="24">Program</text>
+    <g transform="translate(14,52)">
+      <text class="attr" y="0">id (PK)</text>
+      <text class="attr" y="24">name</text>
+      <text class="attr" y="48">description, duration</text>
+      <text class="attr" y="72">caloriesBurned</text>
+      <text class="attr" y="96">image, category</text>
+      <text class="attr" y="120">isDeleted, deletedAt</text>
+    </g>
+  </g>
+
+  <!-- Entity: ProgramWorkout -->
+  <g transform="translate(420,120)">
+    <rect class="box" x="0" y="0" width="360" height="260" />
+    <rect class="header" x="0" y="0" width="360" height="36" />
+    <text class="entity-title" x="14" y="24">ProgramWorkout</text>
+    <g transform="translate(14,52)">
+      <text class="attr" y="0">id (PK)</text>
+      <text class="attr" y="24">program_id (FK → Program.id)</text>
+      <text class="attr" y="48">exercise_id (FK → Exercise.id)</text>
+      <text class="attr" y="72">name, description</text>
+      <text class="attr" y="96">type (‘reps’ | ‘time’)</text>
+      <text class="attr" y="120">value, duration</text>
+      <text class="attr" y="144">image, video</text>
+      <text class="attr" y="168">order_index</text>
+    </g>
+  </g>
+
+  <!-- Entity: Exercise -->
+  <g transform="translate(840,120)">
+    <rect class="box" x="0" y="0" width="320" height="260" />
+    <rect class="header" x="0" y="0" width="320" height="36" />
+    <text class="entity-title" x="14" y="24">Exercise</text>
+    <g transform="translate(14,52)">
+      <text class="attr" y="0">id (PK)</text>
+      <text class="attr" y="24">name, description, tips</text>
+      <text class="attr" y="48">type (‘reps’ | ‘time’)</text>
+      <text class="attr" y="72">value (when reps), duration (when time)</text>
+      <text class="attr" y="96">caloriesBurned</text>
+      <text class="attr" y="120">muscles [string]</text>
+      <text class="attr" y="144">image, video</text>
+    </g>
+  </g>
+
+  <!-- Entity: Users -->
+  <g transform="translate(60,470)">
+    <rect class="box" x="0" y="0" width="320" height="240" />
+    <rect class="header" x="0" y="0" width="320" height="36" />
+    <text class="entity-title" x="14" y="24">User</text>
+    <g transform="translate(14,52)">
+      <text class="attr" y="0">id (PK)</text>
+      <text class="attr" y="24">name, email, phone</text>
+      <text class="attr" y="48">role, status</text>
+      <text class="attr" y="72">joined_at, last_active_at</text>
+      <text class="attr" y="96">avatar, location</text>
+    </g>
+  </g>
+
+  <!-- Entity: Feedback -->
+  <g transform="translate(420,510)">
+    <rect class="box" x="0" y="0" width="360" height="260" />
+    <rect class="header" x="0" y="0" width="360" height="36" />
+    <text class="entity-title" x="14" y="24">Feedback</text>
+    <g transform="translate(14,52)">
+      <text class="attr" y="0">id (PK)</text>
+      <text class="attr" y="24">user_id (FK → User.id)</text>
+      <text class="attr" y="48">target_type (‘program’ | ‘exercise’)</text>
+      <text class="attr" y="72">program_id (FK → Program.id, nullable)</text>
+      <text class="attr" y="96">exercise_id (FK → Exercise.id, nullable)</text>
+      <text class="attr" y="120">rating, comment, likes</text>
+      <text class="attr" y="144">tags [string]</text>
+      <text class="attr" y="168">created_at</text>
+    </g>
+  </g>
+
+  <!-- Relationships -->
+  <!-- Program 1..N ProgramWorkout -->
+  <line class="line" x1="380" y1="210" x2="420" y2="210" marker-end="url(#arrow)" />
+  <text class="label" x="340" y="200">1</text>
+  <text class="label" x="430" y="200">N</text>
+  <text class="small" x="375" y="194">has</text>
+
+  <!-- ProgramWorkout N..1 Exercise -->
+  <line class="line" x1="780" y1="210" x2="840" y2="210" marker-end="url(#arrow)" />
+  <text class="label" x="790" y="200">N</text>
+  <text class="label" x="830" y="200">1</text>
+  <text class="small" x="795" y="194">uses</text>
+
+  <!-- User 1..N Feedback -->
+  <line class="line" x1="380" y1="620" x2="420" y2="640" marker-end="url(#arrow)" />
+  <text class="label" x="340" y="610">1</text>
+  <text class="label" x="430" y="650">N</text>
+  <text class="small" x="368" y="600">writes</text>
+
+  <!-- Feedback .. Program (target) -->
+  <line class="line dash" x1="520" y1="510" x2="220" y2="340" marker-end="url(#arrow)" />
+  <text class="small" x="300" y="420">target (program)</text>
+
+  <!-- Feedback .. Exercise (target) -->
+  <line class="line dash" x1="700" y1="510" x2="980" y2="340" marker-end="url(#arrow)" />
+  <text class="small" x="820" y="420">target (exercise)</text>
+
+  <!-- Legend -->
+  <g transform="translate(840,460)">
+    <rect class="box" x="0" y="0" width="360" height="130" />
+    <rect class="header" x="0" y="0" width="360" height="32" />
+    <text class="entity-title" x="12" y="22">Legend</text>
+    <text class="small" x="12" y="54">Solid line + arrow: relationship direction</text>
+    <text class="small" x="12" y="76">Dashed line: polymorphic target</text>
+    <text class="small" x="12" y="98">Labels 1/N denote cardinality</text>
+  </g>
+
+</svg>
+

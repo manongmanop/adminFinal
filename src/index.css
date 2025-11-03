@@ -9,6 +9,8 @@
   --primary: #0ea5e9;
   --accent: #3b82f6;
   --focus: 3px rgba(14,165,233,0.18);
+  /* Fonts */
+  --font-primary: 'Noto Sans Thai', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   /* layout variables */
   --sidebar-w: 260px;
   --topbar-h: 72px;
@@ -55,6 +57,8 @@ body {
   min-height: 100vh;
   background-color: var(--bg);
   color: var(--text);
+  /* Use primary font site-wide */
+  font-family: var(--font-primary) !important;
 }
 
 h1 {
@@ -75,8 +79,11 @@ h1 {
 /* App root takes full height; scrolling inside main content */
 html, body, #root {
   height: 100%;
+  margin: 0;
+  padding: 0;
 }
 body {
+  
   overflow: auto; /* enable window scrollbar */
 }
 

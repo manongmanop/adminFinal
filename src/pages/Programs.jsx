@@ -18,12 +18,14 @@ import {
   Users
 } from "lucide-react";
 import "../css/Programs.css";
+import useToasts from "../hooks/useToasts.js";
+import Exercise from '../components/Exercise.jsx';
 import { fetchPrograms, fetchExercises, createProgram, updateProgram, deleteProgram } from "../api/client.js";
 
 const createEmptyProgram = () => ({
   id: `program-${Date.now()}`,
   name: "โปรแกรมใหม่",
-  description: "อธิบายรายละเอียดโปรแกรม",
+  description: "อธิบายโปรแกรมฟิตเนส",
   duration: "",
   caloriesBurned: 0,
   image: "",
@@ -55,7 +57,7 @@ export default function Programs() {
   const [editingWorkoutId, setEditingWorkoutId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [toasts, setToasts] = useState([]);
+  const { toasts, pushToast, dismissToast } = useToasts();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [allExercises, setAllExercises] = useState([]);
   const [exerciseQuery, setExerciseQuery] = useState("");
@@ -99,18 +101,7 @@ export default function Programs() {
       }
     })();
   }
-
-  // Toast helpers
-  function pushToast({ type = 'info', title = '', message = '' }) {
-    const id = `t-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    const toast = { id, type, title, message };
-    setToasts((prev) => [toast, ...prev]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3800);
-  }
-  const dismissToast = (id) => setToasts((prev) => prev.filter((t) => t.id !== id));
-
+  // Toasts handled by useToasts hook
   async function openExercisePicker() {
     try {
       setPickerOpen(true);
@@ -184,10 +175,10 @@ export default function Programs() {
       setSelectedProgramId(saved.id);
 
       const addedCount = toAdd.length;
-      pushToast({ type: 'success', title: 'เพิ่มท่าสำเร็จ', message: `เพิ่มท่าออกกำลังกาย ${addedCount} รายการ และบันทึกแล้ว` });
+      pushToast({ type: 'success', title: 'เพิ่มท่าออกกำลังกาย', message: `บันทึก ${addedCount} รายการสำเร็จ` });
     } catch (e) {
       console.error(e);
-      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาด', message: 'ไม่สามารถเพิ่มและบันทึกท่าได้' });
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาด', message: 'ไม่สามารถบันทึกท่าได้' });
     } finally {
       setSelectedExerciseIds(new Set());
       setExerciseQuery("");
@@ -203,7 +194,7 @@ export default function Programs() {
     if (!programForm) return;
     const errors = {};
     if (!programForm.name || programForm.name.trim() === "") {
-      errors.name = "โปรดกรอกชื่อโปรแกรม";
+      errors.name = "โปรดใส่ชื่อโปรแกรม";
     }
     if (Object.keys(errors).length) {
       setProgramErrors(errors);
@@ -228,7 +219,7 @@ export default function Programs() {
       pushToast({ type: 'success', title: 'บันทึกสำเร็จ', message: 'บันทึกโปรแกรมเรียบร้อยแล้ว' });
     } catch (e) {
       console.error(e);
-      setProgramErrors({ general: 'บันทึกโปรแกรมไม่สำเร็จ' });
+      setProgramErrors({ general: 'ไม่สามารถบันทึกโปรแกรมได้' });
       pushToast({ type: 'error', title: 'เกิดข้อผิดพลาด', message: 'ไม่สามารถบันทึกโปรแกรมได้' });
     } finally {
       setLoading(false);
@@ -248,7 +239,7 @@ export default function Programs() {
       pushToast({ type: 'success', title: 'ลบสำเร็จ', message: 'ลบโปรแกรมเรียบร้อยแล้ว' });
     } catch (e) {
       console.error(e);
-      setError('ลบโปรแกรมไม่สำเร็จ');
+      setError('ไม่สามารถลบโปรแกรมได้');
       pushToast({ type: 'error', title: 'เกิดข้อผิดพลาด', message: 'ไม่สามารถลบโปรแกรมได้' });
     }
   }
@@ -256,12 +247,12 @@ export default function Programs() {
   async function saveWorkout() {
     const errors = {};
     if (!workoutForm.name || workoutForm.name.trim() === "") {
-      errors.name = "โปรดกรอกชื่องานฝึก (workout)";
+      errors.name = "โปรดใส่ชื่อท่าออกกำลังกาย (workout)";
     }
     if (workoutForm.type === "reps") {
-      if (!workoutForm.value) errors.value = "โปรดกรอกจำนวนครั้ง (reps)";
+      if (!workoutForm.value) errors.value = "โปรดระบุจำนวนครั้ง (reps)";
     } else {
-      if (!workoutForm.duration) errors.duration = "โปรดกรอกระยะเวลา (duration)";
+      if (!workoutForm.duration) errors.duration = "โปรดระบุระยะเวลา (วินาที)";
     }
     if (Object.keys(errors).length) {
       setWorkoutErrors(errors);
@@ -311,11 +302,11 @@ export default function Programs() {
       setEditingWorkoutId(null);
       setWorkoutForm(emptyWorkoutForm());
       setWorkoutErrors({});
-      pushToast({ type: 'success', title: 'บันทึกสำเร็จ', message: 'บันทึกท่าออกกำลังกายเรียบร้อยแล้ว' });
+      pushToast({ type: 'success', title: 'บันทึกท่าสำเร็จ', message: 'บันทึกท่าออกกำลังกายเรียบร้อยแล้ว' });
     } catch (e) {
       console.error(e);
-      setWorkoutErrors({ general: 'บันทึกท่าออกกำลังกายไม่สำเร็จ' });
-      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาด', message: 'ไม่สามารถบันทึกท่าออกกำลังกายได้' });
+      setWorkoutErrors({ general: 'ไม่สามารถบันทึกท่าออกกำลังกายได้' });
+      pushToast({ type: 'error', title: 'บันทึกไม่สำเร็จ', message: 'เกิดข้อผิดพลาดในการบันทึกท่าออกกำลังกาย' });
     } finally {
       setLoading(false);
     }
@@ -347,7 +338,7 @@ export default function Programs() {
       .catch((err) => {
         if (!mounted) return;
         console.error(err);
-        setError("ไม่สามารถดึงข้อมูลโปรแกรมได้");
+        setError("ไม่สามารถโหลดโปรแกรมได้");
         setPrograms([]);
         setLoading(false);
       });
@@ -372,6 +363,17 @@ export default function Programs() {
       return (p.workoutList || []).some((w) => (w.name || "").toLowerCase().includes(term));
     });
   }, [programs, searchTerm]);
+
+  // FIX: replace any use of the undefined `targetProgram` by deriving the current program here
+  const currentProgram = useMemo(
+    () => programForm || programs.find((p) => p.id === selectedProgramId) || null,
+    [programForm, programs, selectedProgramId]
+  );
+
+  // example derived helper previously referencing targetProgram
+  const currentProgramExerciseIds = useMemo(() => {
+    return new Set((currentProgram?.workoutList || []).map((w) => w.exercise).filter(Boolean));
+  }, [currentProgram]);
 
   useEffect(() => {
     // ensure selection sync when programs change
@@ -405,7 +407,7 @@ export default function Programs() {
     if (!programForm) return;
     const errors = {};
     if (!programForm.name || programForm.name.trim() === "") {
-      errors.name = "กรุณากรอกชื่อโปรแกรม";
+      errors.name = "โปรดใส่ชื่อโปรแกรม";
     }
     if (Object.keys(errors).length) {
       setProgramErrors(errors);
@@ -469,13 +471,13 @@ export default function Programs() {
   function handleSaveWorkout() {
     const errors = {};
     if (!workoutForm.name || workoutForm.name.trim() === "") {
-      errors.name = "กรุณากรอกชื่อชุดโปรแกรม";
+      errors.name = "โปรดใส่ชื่อท่าออกกำลังกาย";
     }
     // validate either value or duration based on type
     if (workoutForm.type === "reps") {
-      if (!workoutForm.value) errors.value = "กรุณากรอกจำนวนครั้ง";
+      if (!workoutForm.value) errors.value = "โปรดระบุจำนวนครั้ง (reps)";
     } else {
-      if (!workoutForm.duration) errors.duration = "กรุณากรอกระยะเวลา";
+      if (!workoutForm.duration) errors.duration = "โปรดระบุระยะเวลา (วินาที)";
     }
     if (Object.keys(errors).length) {
       setWorkoutErrors(errors);
@@ -532,7 +534,7 @@ export default function Programs() {
         {loading ? (
           <Card className="programs__loading">
             <div className="loading-spinner"></div>
-            <p>Loading programs...</p>
+            <p>กำลังโหลดโปรแกรม...</p>
           </Card>
         ) : error ? (
           <Card className="programs__error">
@@ -541,7 +543,7 @@ export default function Programs() {
         ) : (
           <div className="programs__content">
             <div className="programs__list">
-              <h2 className="programs__list-title">All Programs</h2>
+              <h2 className="programs__list-title">รายการโปรแกรมทั้งหมด</h2>
               {programs.map((program) => (
                 <Card key={program.id} className="program-item">
                   <div className="program-item__header">
@@ -580,7 +582,7 @@ export default function Programs() {
         {toasts.map((t) => (
           <div key={t.id} className={`toast toast--${t.type}`}>
             <h4 className="toast__title">{t.title}</h4>
-            <button className="toast__close" onClick={() => dismissToast(t.id)} aria-label="Dismiss">×</button>
+            <button className="toast__close" onClick={() => dismissToast(t.id)} aria-label="ปิดแจ้งเตือน">×</button>
             {t.message && <p className="toast__message">{t.message}</p>}
           </div>
         ))}
@@ -592,14 +594,14 @@ export default function Programs() {
           <div className="modal__overlay" onClick={() => setPickerOpen(false)} />
           <div className="modal__dialog" style={{ maxWidth: '900px', width: '100%' }}>
             <div className="modal__header">
-              <h3 className="modal__title">เลือกท่าออกกำลังกายจากฐานข้อมูล</h3>
+              <h3 className="modal__title">เลือกท่าออกกำลังกาย</h3>
               <button className="modal__close" onClick={() => setPickerOpen(false)}>×</button>
             </div>
             <div className="modal__body">
               <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
                 <input
                   className="input"
-                  placeholder="ค้นหาตามชื่อท่า..."
+                  placeholder="ค้นหาชื่อท่าออกกำลังกาย..."
                   value={exerciseQuery}
                   onChange={(e) => setExerciseQuery(e.target.value)}
                 />
@@ -616,7 +618,9 @@ export default function Programs() {
                           <h4 style={{ margin: 0 }}>{ex.name}</h4>
                           <input type="checkbox" checked={selected} readOnly />
                         </div>
-                        <div style={{ fontSize: '.85rem', color: '#64748b' }}>{ex.type === 'time' ? `เวลา: ${ex.duration ?? '-'}` : `ครั้ง: ${ex.value ?? '-'}`}</div>
+                        <div style={{ fontSize: '.85rem', color: '#64748b' }}>
+                          {ex.type === 'time' ? `เวลา: ${ex.duration ?? '-'}` : `จำนวนครั้ง: ${ex.value ?? '-'}`}
+                        </div>
                         {Array.isArray(ex.muscles) && ex.muscles.length > 0 && (
                           <div style={{ marginTop: '.5rem', display: 'flex', flexWrap: 'wrap', gap: '.25rem' }}>
                             {ex.muscles.map((m) => (
@@ -631,7 +635,7 @@ export default function Programs() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '.5rem', padding: '0 1.5rem 1.25rem' }}>
               <button className="btn btn--secondary" onClick={() => setPickerOpen(false)}>ยกเลิก</button>
-              <button className="btn btn--primary" onClick={addSelectedExercisesToProgram}>บันทึกการเลือก</button>
+              <button className="btn btn--primary" onClick={addSelectedExercisesToProgram}>เพิ่มที่เลือก</button>
             </div>
           </div>
         </div>
@@ -643,15 +647,15 @@ export default function Programs() {
             <Dumbbell size={28} />
           </div>
           <div className="programs__header-text">
-            <h1 className="programs__title">จัดการโปรแกรมออกกำลังกาย</h1>
+            <h1 className="programs__title">โปรแกรมออกกำลังกาย</h1>
             <p className="programs__subtitle">
-              สร้าง ปรับแต่ง และจัดการชุดท่าฝึกออกกำลังกายในระบบ
+              จัดการโปรแกรม เพิ่ม/แก้ไข/จัดลำดับท่า และค้นหาโปรแกรมที่ต้องการได้ที่นี่
             </p>
           </div>
         </div>
         <Button onClick={handleAddProgram} disabled={loading}>
           <Plus size={16} />
-          <span>เพิ่มโปรแกรมใหม่</span>
+          <span>สร้างโปรแกรม</span>
         </Button>
       </div>
 
@@ -659,35 +663,35 @@ export default function Programs() {
       <div className="programs__stats">
         <Card className="stat-card">
           <div className="stat-card__header">
-            <span className="stat-card__label">โปรแกรมทั้งหมด</span>
+            <span className="stat-card__label">จำนวนโปรแกรมทั้งหมด</span>
             <div className="stat-card__icon stat-card__icon--emerald">
               <Activity size={18} />
             </div>
           </div>
           <div className="stat-card__value">{programs.length}</div>
-          <p className="stat-card__description">จำนวนโปรแกรมที่อยู่ในระบบ</p>
+          <p className="stat-card__description">รวมจำนวนโปรแกรมที่มีอยู่ในระบบ</p>
         </Card>
 
         <Card className="stat-card">
           <div className="stat-card__header">
-            <span className="stat-card__label">ชุดท่าเฉลี่ย</span>
+            <span className="stat-card__label">ค่าเฉลี่ยจำนวนท่าต่อโปรแกรม</span>
             <div className="stat-card__icon stat-card__icon--blue">
               <Layers size={18} />
             </div>
           </div>
           <div className="stat-card__value">{averageWorkouts}</div>
-          <p className="stat-card__description">จำนวนท่าฝึกเฉลี่ยในแต่ละโปรแกรม</p>
+          <p className="stat-card__description">คิดจากจำนวนท่าทั้งหมดหารด้วยจำนวนโปรแกรม</p>
         </Card>
 
         <Card className="stat-card">
           <div className="stat-card__header">
-            <span className="stat-card__label">ผลลัพธ์การค้นหา</span>
+            <span className="stat-card__label">ผลลัพธ์จากการค้นหา</span>
             <div className="stat-card__icon stat-card__icon--purple">
               <Search size={18} />
             </div>
           </div>
           <div className="stat-card__value">{filteredPrograms.length}</div>
-          <p className="stat-card__description">โปรแกรมที่ตรงกับคำค้นหา</p>
+          <p className="stat-card__description">จำนวนโปรแกรมที่ตรงกับคำค้นหา</p>
         </Card>
       </div>
 
@@ -695,7 +699,7 @@ export default function Programs() {
       <Card className="programs__search">
         <div className="programs__search-wrapper">
           <label className="programs__search-label" htmlFor="program-search">
-            ค้นหาโปรแกรมหรือท่าฝึก
+            ค้นหาโปรแกรมหรือชื่อท่า
           </label>
           <div className="programs__search-input-wrapper">
             <Search size={18} className="programs__search-icon" />
@@ -703,13 +707,13 @@ export default function Programs() {
               id="program-search"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="ค้นหาตามชื่อโปรแกรมหรือท่าฝึกภายในโปรแกรม"
+              placeholder="พิมพ์ชื่อโปรแกรม คำอธิบาย หรือชื่อท่าออกกำลังกาย"
               className="programs__search-input"
               disabled={loading || !!error}
             />
           </div>
           <p className="programs__search-hint">
-            ระบบจะค้นหาจากชื่อโปรแกรมและชื่อท่าฝึกที่อยู่ในแต่ละชุดโปรแกรมโดยอัตโนมัติ
+            เคล็ดลับ: ค้นหาด้วยคำสำคัญ เช่น “หน้าอก”, “คาร์ดิโอ”, “full body” เพื่อกรองรายการอย่างรวดเร็ว
           </p>
         </div>
       </Card>
@@ -718,13 +722,13 @@ export default function Programs() {
       {loading ? (
         <Card className="programs__loading">
           <div className="loading-spinner"></div>
-          <p>กำลังโหลดข้อมูลโปรแกรม...</p>
+          <p>กำลังโหลดโปรแกรม...</p>
         </Card>
       ) : error ? (
         <Card className="programs__error">
           <p>{error}</p>
           <Button variant="secondary" onClick={() => window.location.reload()}>
-            ลองใหม่อีกครั้ง
+            ลองใหม่
           </Button>
         </Card>
       ) : (
@@ -756,7 +760,7 @@ export default function Programs() {
                       </span>
                       <span className="program-item__meta-item">
                         <Flame size={14} />
-                        {program.caloriesBurned} แคลอรี
+                        {program.caloriesBurned} kcal
                       </span>
                       <span className="program-item__meta-item">
                         <Target size={14} />
@@ -771,7 +775,7 @@ export default function Programs() {
                     className="program-item__delete"
                     onClick={(e) => {
                       e.stopPropagation();
-                      deleteProgramApi(program.id);
+                      if (window.confirm('ยืนยันการลบโปรแกรมนี้หรือไม่? (ลบข้อมูลออกจากรายการ)')) { deleteProgramApi(program.id); }
                     }}
                   >
                     <Trash2 size={16} />
@@ -789,7 +793,7 @@ export default function Programs() {
                 )}
                 
                 {program.workoutList.length === 0 && (
-                  <p className="program-item__empty">ยังไม่มีชุดโปรแกรม</p>
+                  <p className="program-item__empty">ยังไม่มีท่าออกกำลังกายในโปรแกรมนี้</p>
                 )}
               </Card>
             ))}
@@ -817,12 +821,12 @@ export default function Programs() {
                         return src ? (
                           <img src={src} alt="program preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
-                          <span style={{ color: '#94a3b8', fontSize: 12 }}>ไม่มีภาพตัวอย่าง</span>
+                          <span style={{ color: '#94a3b8', fontSize: 12 }}>ไม่มีรูปตัวอย่าง</span>
                         );
                       })()}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <label className="form-label" htmlFor="program-image">ลิงก์ภาพโปรแกรม (URL)</label>
+                      <label className="form-label" htmlFor="program-image">รูปภาพตัวอย่างโปรแกรม (URL)</label>
                       <Input
                         id="program-image"
                         value={programForm.image || ''}
@@ -865,7 +869,7 @@ export default function Programs() {
                             }}
                           />
                         </label>
-                        <span className="badge badge--gray">หรือใส่ URL แล้วบันทึก</span>
+                        <span className="badge badge--gray">รองรับ URL และไฟล์อัปโหลด</span>
                       </div>
                     </div>
                   </div>
@@ -873,13 +877,13 @@ export default function Programs() {
                 {/* Program Form */}
                 <Card className="program-form">
                   <div className="program-form__header">
-                    <h2 className="program-form__title">รายละเอียดโปรแกรม</h2>
+                    <h2 className="program-form__title">ข้อมูลโปรแกรม</h2>
                     <Button onClick={saveProgram}>
                       <Save size={16} />
-                      <span>บันทึกข้อมูล</span>
+                      <span>บันทึกโปรแกรม</span>
                     </Button>
                     <Button onClick={openExercisePicker}>
-                      เลือกจากฐานข้อมูล
+                      เลือกท่าออกกำลังกาย
                     </Button>
                   </div>
 
@@ -901,14 +905,14 @@ export default function Programs() {
 
                     <div className="form-group">
                       <label className="form-label" htmlFor="program-description">
-                        รายละเอียด (คำอธิบาย)
+                        คำอธิบายโปรแกรม (ไม่บังคับ)
                       </label>
                       <Textarea
                         id="program-description"
                         rows={4}
                         value={programForm.description}
                         onChange={(e) => handleProgramFieldChange("description", e.target.value)}
-                        placeholder="อธิบายเป้าหมายและลักษณะของโปรแกรม"
+                        placeholder="รายละเอียดโปรแกรม จุดประสงค์ อุปกรณ์ที่ใช้ หรือหมายเหตุอื่น ๆ"
                       />
                       {programErrors.description && (
                         <p className="form-error">{programErrors.description}</p>
@@ -918,7 +922,7 @@ export default function Programs() {
                     <div className="form-row">
                       <div className="form-group">
                         <label className="form-label" htmlFor="program-duration">
-                          ระยะเวลาโปรแกรม
+                          ระยะเวลาโดยรวม
                         </label>
                         <Input
                           id="program-duration"
@@ -933,7 +937,7 @@ export default function Programs() {
 
                       <div className="form-group">
                         <label className="form-label" htmlFor="program-calories">
-                          พลังงานที่เผาผลาญ (แคลอรี)
+                          แคลอรีโดยประมาณ (kcal)
                         </label>
                         <Input
                           id="program-calories"
@@ -947,7 +951,7 @@ export default function Programs() {
 
                     <div className="form-group">
                       <label className="form-label" htmlFor="program-category">
-                        หมวดหมู่โปรแกรม
+                        หมวดหมู่/ประเภท
                       </label>
                       <Input
                         id="program-category"
@@ -966,16 +970,16 @@ export default function Programs() {
                 <Card className="workout-list">
                   <div className="workout-list__header">
                     <div>
-                      <h2 className="workout-list__title">ชุดท่าฝึกในโปรแกรม</h2>
+                      <h2 className="workout-list__title">ท่าที่อยู่ในโปรแกรม</h2>
                       <p className="workout-list__subtitle">
-                        เพิ่มหรือแก้ไขรายละเอียดของแต่ละชุดท่าฝึก
+                        ลากการ์ดเพื่อจัดลำดับท่า หรือแก้ไขรายละเอียดของแต่ละท่า
                       </p>
                     </div>
                     <Button 
                       onClick={() => setWorkoutForm(emptyWorkoutForm())} 
                       variant="secondary"
                     >
-                      รีเซ็ตฟอร์ม
+                      ล้างฟอร์ม
                     </Button>
                   </div>
 
@@ -1040,191 +1044,28 @@ export default function Programs() {
                       <Card className="workout-list__empty">
                         <Layers size={48} className="workout-list__empty-icon" />
                         <p className="workout-list__empty-text">
-                          ยังไม่มีชุดท่าฝึกสำหรับโปรแกรมนี้
+                          ยังไม่มีท่าในโปรแกรมนี้ — กด “เลือกท่าออกกำลังกาย” หรือเพิ่มจากฟอร์มด้านล่าง
                         </p>
                       </Card>
                     )}
                   </div>
                 </Card>
 
-                {/* Workout Form */}
-                <Card className="workout-form">
-                  <div className="workout-form__header">
-                    <h2 className="workout-form__title">เพิ่ม / แก้ไขชุดโปรแกรม</h2>
-                    <p className="workout-form__subtitle">
-                      กรอกข้อมูลรายละเอียดและกำหนดกล้ามเนื้อที่เกี่ยวข้อง
-                    </p>
-                  </div>
-
-                  <div className="workout-form__body">
-                    <div className="form-group">
-                      <label className="form-label" htmlFor="workout-name">
-                        ชื่อชุดโปรแกรม
-                      </label>
-                      <Input
-                        id="workout-name"
-                        value={workoutForm.name}
-                        onChange={(e) => handleWorkoutFieldChange("name", e.target.value)}
-                        placeholder="เช่น Warm-up Session"
-                      />
-                      {workoutErrors.name && (
-                        <p className="form-error">{workoutErrors.name}</p>
-                      )}
-                    </div>
-
-                    <div className="form-group">
-                      <label className="form-label" htmlFor="workout-description">
-                        รายละเอียดชุดโปรแกรม
-                      </label>
-                      <Textarea
-                        id="workout-description"
-                        rows={3}
-                        value={workoutForm.description}
-                        onChange={(e) => handleWorkoutFieldChange("description", e.target.value)}
-                        placeholder="อธิบายรายละเอียดและเทคนิคของชุดโปรแกรม"
-                      />
-                      {workoutErrors.description && (
-                        <p className="form-error">{workoutErrors.description}</p>
-                      )}
-                    </div>
-
-                    <div className="form-group">
-                      <label className="form-label" htmlFor="workout-muscles">
-                        กล้ามเนื้อที่เกี่ยวข้อง
-                      </label>
-                      <Input
-                        id="workout-muscles"
-                        value={workoutForm.musclesText}
-                        onChange={(e) => handleWorkoutFieldChange("musclesText", e.target.value)}
-                        placeholder="ระบุด้วยเครื่องหมายจุลภาค เช่น chest, arms"
-                      />
-                      {workoutErrors.muscles && (
-                        <p className="form-error">{workoutErrors.muscles}</p>
-                      )}
-                    </div>
-
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label className="form-label" htmlFor="workout-type">
-                          ประเภทการกำหนด
-                        </label>
-                        <select
-                          id="workout-type"
-                          value={workoutForm.type}
-                          onChange={(e) => handleWorkoutFieldChange("type", e.target.value)}
-                          className="form-select"
-                        >
-                          <option value="reps">จำนวนครั้ง</option>
-                          <option value="time">ระยะเวลา</option>
-                        </select>
-                      </div>
-
-                      {workoutForm.type === "reps" ? (
-                        <div className="form-group">
-                          <label className="form-label" htmlFor="workout-value">
-                            จำนวนครั้ง
-                          </label>
-                          <Input
-                            id="workout-value"
-                            type="number"
-                            value={workoutForm.value}
-                            onChange={(e) => handleWorkoutFieldChange("value", e.target.value)}
-                            placeholder="เช่น 12"
-                          />
-                          {workoutErrors.value && (
-                            <p className="form-error">{workoutErrors.value}</p>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="form-group">
-                          <label className="form-label" htmlFor="workout-duration">
-                            ระยะเวลา (วินาที)
-                          </label>
-                          <Input
-                            id="workout-duration"
-                            type="number"
-                            value={workoutForm.duration}
-                            onChange={(e) => handleWorkoutFieldChange("duration", e.target.value)}
-                            placeholder="เช่น 60"
-                          />
-                          {workoutErrors.duration && (
-                            <p className="form-error">{workoutErrors.duration}</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label className="form-label" htmlFor="workout-image">
-                          อัปโหลดรูปภาพ
-                        </label>
-                        <div className="file-upload">
-                          <label className="file-upload__label">
-                            <Upload size={16} />
-                            <span>เลือกรูปภาพ</span>
-                            <input
-                              id="workout-image"
-                              type="file"
-                              accept="image/*"
-                              className="file-upload__input"
-                              onChange={(e) => handleUpload("image", e.target.files)}
-                            />
-                          </label>
-                          {workoutForm.image && (
-                            <span className="file-upload__filename">{workoutForm.image}</span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="form-group">
-                        <label className="form-label" htmlFor="workout-video">
-                          อัปโหลดวิดีโอสอน
-                        </label>
-                        <div className="file-upload">
-                          <label className="file-upload__label">
-                            <Upload size={16} />
-                            <span>เลือกวิดีโอ</span>
-                            <input
-                              id="workout-video"
-                              type="file"
-                              accept="video/*"
-                              className="file-upload__input"
-                              onChange={(e) => handleUpload("video", e.target.files)}
-                            />
-                          </label>
-                          {workoutForm.video && (
-                            <span className="file-upload__filename">{workoutForm.video}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="workout-form__actions">
-                      <Button 
-                        variant="secondary" 
-                        onClick={() => {
-                          setWorkoutForm(emptyWorkoutForm());
-                          setEditingWorkoutId(null);
-                        }}
-                      >
-                        รีเซ็ต
-                      </Button>
-                      <Button onClick={saveWorkout}>
-                        <Save size={16} />
-                        <span>
-                          {editingWorkoutId ? "อัปเดตชุดโปรแกรม" : "เพิ่มชุดโปรแกรม"}
-                        </span>
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
+                                <Exercise
+                  form={workoutForm}
+                  errors={workoutErrors}
+                  editing={!!editingWorkoutId}
+                  onChange={handleWorkoutFieldChange}
+                  onUpload={handleUpload}
+                  onCancel={() => { setWorkoutForm(emptyWorkoutForm()); setEditingWorkoutId(null); }}
+                  onSave={saveWorkout}
+                />
               </>
             ) : (
               <Card className="programs__no-selection">
                 <Dumbbell size={64} className="programs__no-selection-icon" />
                 <p className="programs__no-selection-text">
-                  เลือกโปรแกรมเพื่อดูรายละเอียด
+                  เลือกโปรแกรมทางซ้ายเพื่อเริ่มแก้ไข
                 </p>
               </Card>
             )}
@@ -1234,3 +1075,5 @@ export default function Programs() {
     </div>
   );
 }
+
+
