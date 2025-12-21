@@ -465,18 +465,31 @@ app.delete("/api/exercises/:id", async (req, res) => {
     }
   });
 
-  app.get("/api/feedback", async (_req, res) => {
-    try {
-      const db = await getDb();
-      const exercises = await fetchExercises(db);
-      const programs = await fetchPrograms(db, exercises);
-      const feedback = await fetchFeedback(db, programs, exercises);
-      res.json(feedback);
-    } catch (error) {
-      console.error("[api] failed to load feedback", error);
-      res.status(500).json({ message: "ไม่สามารถดึงข้อมูลความคิดเห็นได้" });
-    }
-  });
+  app.get("/api/programs/feedback", async (_req, res) => {
+  try {
+    const db = await getDb();
+    const docs = await db.collection("Program")
+      .find(
+        { $or: [{ isDeleted: { $exists: false } }, { isDeleted: false }] },
+        { projection: { name: 1, image: 1, category: 1, DataFeedback: 1 } }
+      )
+      .toArray();
+
+    const out = docs.map((p) => ({
+      id: p._id?.toString?.(),
+      targetType: "program",
+      targetName: p.name || "",
+      imageUrl: p.image || null,
+      sentimentData: p.DataFeedback || { easy: 0, medium: 0, hard: 0 },
+    }));
+
+    res.json(out);
+  } catch (e) {
+    console.error("[api] programs feedback failed", e);
+    res.status(500).json({ message: "ไม่สามารถดึงข้อมูล DataFeedback ได้" });
+  }
+});
+
 
   // Return counts for Overview dashboard (programs, exercises, users)
   app.get("/api/counts", async (_req, res) => {

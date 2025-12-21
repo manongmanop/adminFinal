@@ -43,7 +43,9 @@ export function fetchUsers() {
 export function fetchCounts() {
   return request("/counts");
 }
-
+export function fetchProgramsFeedback() {
+  return request("/programs/feedback");
+}
 /* ========== PROGRAMS write ops (ผ่าน request) ========== */
 export function createProgram(data) {
   return request("/programs", { method: "POST", body: JSON.stringify(data) });
@@ -75,4 +77,7 @@ export function updateExercise(id, payload) {
 
 export function deleteExercise(id) {
   return request(`/exercises/${id}`, { method: "DELETE" });
+}
+export function fetchProgramsWithFeedback() {
+  return request("/programs/feedback");
 }

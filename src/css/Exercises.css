@@ -712,8 +712,10 @@
 }
 
 /* ===== Modal/Notice/Checkbox styles (ถ้ายังไม่มี ให้คงไว้จากชุดก่อน) ===== */
-/* คุณมี modal-backdrop, modal-card*, notice-card*, checkbox-chip ฯลฯ อยู่แล้ว
-   ถ้ายังไม่ได้ใส่จากรอบก่อน ให้คัดลอกชุด modal/notice/checkbox จากที่ผมให้ไปก่อนหน้านี้มาวางต่อท้ายด้วย */
+.app { isolation: isolate; }         /* root */
+.app-topbar { z-index: 40; }         /* ของเดิม */
+.confirm-layer { position: fixed; inset: 0; z-index: 9999; } /* สูงกว่าแน่ๆ */
+
 
 /* ===================================
    Responsive Design
