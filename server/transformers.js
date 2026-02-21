@@ -52,8 +52,13 @@ export function normalizeProgram(doc, exercisesById = new Map()) {
     caloriesBurned: Number(doc?.caloriesBurned ?? 0) || 0,
     image: doc?.imageUrl || doc?.image || "",
     category: doc?.category || doc?.level || "",
+    DataFeedback: doc?.DataFeedback || null,
     workoutList: workouts.map((item, index) => {
-      const referenceId = item?.exercise?._id?.toString?.() || item?.exercise?.toString?.() || item?.exerciseId;
+      // The item.exercise could be an ObjectId or an object like { "$oid": "..." }
+      let referenceId = item?.exercise?._id?.toString?.() || item?.exercise?.toString?.() || item?.exerciseId;
+      if (item?.exercise && typeof item.exercise === 'object' && item.exercise.$oid) {
+        referenceId = item.exercise.$oid;
+      }
       const normalizedExercise = exercisesById.get(referenceId);
 
       const fallbackMuscles = Array.isArray(item?.muscles)

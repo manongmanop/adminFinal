@@ -1,24 +1,23 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Card, Button, Input, Textarea, Badge } from "../components/ui.jsx";
 import {
-  Dumbbell,
   Search,
-  Filter,
   Plus,
+  Dumbbell,
+  Target,
   Flame,
   Clock,
   CheckCircle2,
-  Target,
-  Layers,
   Edit2,
   Trash2,
   Save,
+  X,
   XCircle,
   CheckCircle,
+  PlaySquare,
+  Image as ImageIcon
 } from "lucide-react";
 import "../css/Exercises.css";
 import { fetchExercises, createExercise, updateExercise, deleteExercise } from "../api/client.js";
-import { exercisesData } from "../data/fitnessData.js";
 
 /* ===== Upload helper ===== */
 async function uploadFile(file) {
@@ -47,7 +46,7 @@ const muscleOptions = [
 
 /* ===== UI helpers ===== */
 const emptyExercise = () => ({
-  id: `ex-${Date.now()}`,
+  id: `draft-${Date.now()}`,
   name: "",
   description: "",
   tips: "",
@@ -60,144 +59,131 @@ const emptyExercise = () => ({
   muscles: [],
 });
 
+const resolveImageUrl = (src) => {
+  if (!src) return '';
+  if (typeof src !== 'string') return '';
+  if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('/')) return src;
+  return `/uploads/${src}`;
+};
+
 export default function Exercises() {
   const [exercises, setExercises] = useState([]);
   const [query, setQuery] = useState("");
   const [muscleFilter, setMuscleFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [selectedExerciseId, setSelectedExerciseId] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // form & modal states
-  const [formOpen, setFormOpen] = useState(false);
-  const [formMode, setFormMode] = useState("create"); // create | edit
-  const [draft, setDraft] = useState(emptyExercise());
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [draft, setDraft] = useState(null);
 
-  // upload states
+  // Upload States
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
 
-  // notification card box
-  const [notice, setNotice] = useState({
-    open: false,
-    type: "success", // success | error
-    title: "",
-    message: "",
-  });
+  // Toasts
+  const [toasts, setToasts] = useState([]);
+  const pushToast = (opt) => {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { id, ...opt }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  };
+  const dismissToast = (id) => setToasts((prev) => prev.filter((t) => t.id !== id));
 
-  // ===== Load =====
+  // Load
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    setError(null);
-
     fetchExercises()
       .then((data) => {
         if (cancelled) return;
         const normalized = Array.isArray(data)
           ? data.map((exercise) => ({
-              ...exercise,
-              muscles: Array.isArray(exercise.muscles) ? exercise.muscles : [],
-            }))
+            ...exercise,
+            muscles: Array.isArray(exercise.muscles) ? exercise.muscles : [],
+          }))
           : [];
-        const final = normalized.length > 0 ? normalized : exercisesData;
-        setExercises(final);
-        setSelectedExerciseId((prev) => prev ?? final[0]?.id ?? null);
+        setExercises(normalized);
       })
       .catch((err) => {
         if (cancelled) return;
         console.error("ไม่สามารถดึงข้อมูลท่าฝึก", err);
-        setError("ไม่สามารถโหลดข้อมูลท่าฝึกได้ กรุณาลองใหม่อีกครั้ง");
-        setExercises([]);
-        setSelectedExerciseId(null);
+        setError("ไม่สามารถโหลดข้อมูลท่าฝึกได้");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   const filteredExercises = useMemo(() => {
     const term = query.toLowerCase();
-    return exercises.filter((exercise) => {
-      const name = (exercise.name || "").toLowerCase();
-      const desc = (exercise.description || "").toLowerCase();
-      const muscles = Array.isArray(exercise.muscles) ? exercise.muscles : [];
-      const matchesQuery =
-        name.includes(term) || desc.includes(term) || muscles.some((m) => m.toLowerCase().includes(term));
-      const matchesMuscle =
-        muscleFilter === "all" || muscles.map((m) => m.toLowerCase()).includes(muscleFilter.toLowerCase());
-      const matchesType = typeFilter === "all" || exercise.type === typeFilter;
-      return matchesQuery && matchesMuscle && matchesType;
+    return exercises.filter((ex) => {
+      const name = (ex.name || "").toLowerCase();
+      const desc = (ex.description || "").toLowerCase();
+      const mus = Array.isArray(ex.muscles) ? ex.muscles : [];
+      const matchSearch = name.includes(term) || desc.includes(term) || mus.some(m => m.toLowerCase().includes(term));
+      const matchMuscle = muscleFilter === "all" || mus.map(m => m.toLowerCase()).includes(muscleFilter.toLowerCase());
+      return matchSearch && matchMuscle;
     });
-  }, [exercises, muscleFilter, query, typeFilter]);
+  }, [exercises, muscleFilter, query]);
 
   const muscleLookup = useMemo(() => {
-    return muscleOptions.reduce((acc, option) => {
-      if (option.value !== "all") acc[option.value] = option.label;
+    return muscleOptions.reduce((acc, opt) => {
+      if (opt.value !== "all") acc[opt.value] = opt.label;
       return acc;
     }, {});
   }, []);
 
-  useEffect(() => {
-    if (filteredExercises.length === 0) {
-      setSelectedExerciseId(null);
-      return;
+  const openModal = (exercise = null) => {
+    if (exercise) {
+      setDraft({
+        ...exercise,
+        value: exercise.value ?? 10,
+        duration: exercise.duration ?? 30,
+        caloriesBurned: exercise.caloriesBurned ?? 0,
+        muscles: Array.isArray(exercise.muscles) ? [...exercise.muscles] : [],
+      });
+    } else {
+      setDraft(emptyExercise());
     }
-    if (!filteredExercises.some((exercise) => exercise.id === selectedExerciseId)) {
-      setSelectedExerciseId(filteredExercises[0].id);
-    }
-  }, [filteredExercises, selectedExerciseId]);
+    setIsModalOpen(true);
+  };
 
-  const selectedExercise =
-    filteredExercises.find((exercise) => exercise.id === selectedExerciseId) ??
-    filteredExercises[0] ??
-    exercises[0] ??
-    null;
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setDraft(null);
+  };
 
-  const stats = useMemo(() => {
-    const total = filteredExercises.length;
-    const totalCalories = filteredExercises.reduce(
-      (sum, exercise) => sum + (exercise.caloriesBurned ?? 0),
-      0
-    );
-    const repsCount = filteredExercises.filter((exercise) => exercise.type === "reps").length;
-    const timeCount = filteredExercises.filter((exercise) => exercise.type === "time").length;
-    return { total, totalCalories, repsCount, timeCount };
-  }, [filteredExercises]);
+  const handleFieldChange = (field, val) => {
+    setDraft(prev => ({ ...prev, [field]: val }));
+  };
 
-  function resolveImageUrl(src) {
-    if (!src) return "";
-    let s = typeof src === "string" ? src : String(src);
-    if (/^https?:\/\//i.test(s)) return s;
-    s = s.replace(/^[.\/]+/, "");
-    s = s.replace(/^(?:uploads\/)+/i, "uploads/");
-    if (s.toLowerCase().startsWith("uploads/")) s = s.slice("uploads/".length);
-    return `/uploads/${s}`;
-  }
+  const handleCheckbox = (muscleValue, checked) => {
+    setDraft(d => {
+      const set = new Set(d.muscles || []);
+      if (checked) set.add(muscleValue);
+      else set.delete(muscleValue);
+      return { ...d, muscles: Array.from(set) };
+    });
+  };
 
-  // ===== Upload Handlers =====
   const onPickImage = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
       setUploadingImage(true);
-      const result = await uploadFile(file);
-      setDraft((d) => ({ ...d, image: result.url }));
+      const res = await uploadFile(file);
+      handleFieldChange("image", res.url);
+      pushToast({ type: "success", title: "อัปโหลดภาพเรียบร้อย" });
     } catch (err) {
-      setNotice({
-        open: true,
-        type: "error",
-        title: "อัปโหลดรูปไม่สำเร็จ",
-        message: err?.message || "โปรดลองใหม่",
-      });
+      pushToast({ type: "error", title: "อัปโหลดภาพไม่สำเร็จ", message: err.message });
     } finally {
       setUploadingImage(false);
+      e.target.value = '';
     }
   };
 
@@ -206,602 +192,296 @@ export default function Exercises() {
     if (!file) return;
     try {
       setUploadingVideo(true);
-      const result = await uploadFile(file);
-      setDraft((d) => ({ ...d, video: result.url }));
+      const res = await uploadFile(file);
+      handleFieldChange("video", res.url);
+      pushToast({ type: "success", title: "อัปโหลดวิดีโอเรียบร้อย" });
     } catch (err) {
-      setNotice({
-        open: true,
-        type: "error",
-        title: "อัปโหลดวิดีโอไม่สำเร็จ",
-        message: err?.message || "โปรดลองใหม่",
-      });
+      pushToast({ type: "error", title: "อัปโหลดวิดีโอไม่สำเร็จ", message: err.message });
     } finally {
       setUploadingVideo(false);
+      e.target.value = '';
     }
-  };
-
-  // ===== CRUD Handlers =====
-  const openCreate = () => {
-    setFormMode("create");
-    setDraft(emptyExercise());
-    setFormOpen(true);
-  };
-
-  const openEdit = (ex) => {
-    setFormMode("edit");
-    setDraft({
-      ...ex,
-      value: ex.value ?? 10,
-      duration: ex.duration ?? 30,
-      caloriesBurned: ex.caloriesBurned ?? 0,
-      muscles: Array.isArray(ex.muscles) ? ex.muscles : [],
-    });
-    setFormOpen(true);
   };
 
   const handleSave = async () => {
+    if (!draft.name.trim()) {
+      return pushToast({ type: "error", title: "ตรวจสอบข้อมูล", message: "โปรดระบุชื่อท่าฝึก" });
+    }
     try {
-      if (!draft.name.trim()) {
-        return setNotice({
-          open: true,
-          type: "error",
-          title: "กรอกข้อมูลไม่ครบ",
-          message: "โปรดระบุชื่อท่าฝึกอย่างน้อย 1 รายการ",
-        });
-      }
-
+      const isObjectId = (id) => typeof id === 'string' && /^[a-f0-9]{24}$/i.test(id);
       const payload = draft.type === "reps" ? { ...draft, duration: null } : { ...draft, value: null };
 
-      if (formMode === "create") {
+      if (!isObjectId(draft.id)) {
         const created = await createExercise(payload);
-        setExercises((prev) => [created, ...prev]);
-        setSelectedExerciseId(created.id);
-        setNotice({
-          open: true,
-          type: "success",
-          title: "เพิ่มท่าฝึกสำเร็จ",
-          message: `เพิ่ม "${created.name}" เข้าคลังท่าฝึกแล้ว`,
-        });
+        setExercises(prev => [created, ...prev]);
+        pushToast({ type: "success", title: "เพิ่มท่าฝึกสำเร็จ" });
       } else {
         const updated = await updateExercise(draft.id, payload);
-        setExercises((prev) => prev.map((ex) => (ex.id === updated.id ? updated : ex)));
-        setSelectedExerciseId(updated.id);
-        setNotice({
-          open: true,
-          type: "success",
-          title: "อัปเดตท่าฝึกสำเร็จ",
-          message: `บันทึกการแก้ไข "${updated.name}" เรียบร้อย`,
-        });
+        setExercises(prev => prev.map(ex => ex.id === updated.id ? updated : ex));
+        pushToast({ type: "success", title: "ปรับปรุงท่าฝึกสำเร็จ" });
       }
-      setFormOpen(false);
+      closeModal();
     } catch (e) {
-      console.error(e);
-      setNotice({
-        open: true,
-        type: "error",
-        title: "เกิดข้อผิดพลาด",
-        message: "บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
-      });
+      pushToast({ type: "error", title: "เกิดข้อผิดพลาด", message: e.message });
     }
   };
-
-  const requestDelete = () => setConfirmOpen(true);
 
   const handleDelete = async () => {
+    if (!window.confirm(`ยืนยันการลบท่าฝึก "${draft.name}" ใช่หรือไม่?`)) return;
     try {
-      const targetId = selectedExercise?.id;
-      if (!targetId) return setConfirmOpen(false);
-      await deleteExercise(targetId);
-      setExercises((prev) => prev.filter((ex) => ex.id !== targetId));
-      setConfirmOpen(false);
-
-      const next = filteredExercises.find((ex) => ex.id !== targetId);
-      setSelectedExerciseId(next?.id ?? null);
-
-      setNotice({
-        open: true,
-        type: "success",
-        title: "ลบท่าฝึกสำเร็จ",
-        message: "รายการถูกลบออกจากคลังแล้ว",
-      });
+      await deleteExercise(draft.id);
+      setExercises(prev => prev.filter(ex => ex.id !== draft.id));
+      pushToast({ type: "success", title: "ลบท่าฝึกเรียบร้อย" });
+      closeModal();
     } catch (e) {
-      console.error(e);
-      setConfirmOpen(false);
-      setNotice({
-        open: true,
-        type: "error",
-        title: "ลบไม่สำเร็จ",
-        message: "เกิดปัญหาในการลบ กรุณาลองใหม่",
-      });
+      pushToast({ type: "error", title: "การลบล้มเหลว", message: e.message });
     }
   };
 
-  const closeNotice = () => setNotice((n) => ({ ...n, open: false }));
-
-  // ====== UI ======
   return (
-    <div className="exercises">
-      {/* Header */}
-      <div className="exercises__header">
-        <div className="exercises__header-content">
-          <div className="exercises__header-icon">
+    <div className="exercises-page">
+      {/* Toasts (Re-using classes from Programs or define minimal local)*/}
+      <div className="toast-container" style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        {toasts.map((t) => (
+          <div key={t.id} style={{ background: 'white', padding: '1rem', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', borderLeft: t.type === 'error' ? '4px solid #ef4444' : '4px solid #10b981', minWidth: 250, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h4 style={{ margin: 0, fontSize: 14, fontWeight: 'bold', color: '#0f172a' }}>{t.title}</h4>
+              {t.message && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748b' }}>{t.message}</p>}
+            </div>
+            <button onClick={() => dismissToast(t.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><X size={16} /></button>
+          </div>
+        ))}
+      </div>
+
+      {/* Header Banner */}
+      <div className="ex-header-banner">
+        <div className="ex-header-left">
+          <div className="ex-header-icon">
             <Dumbbell size={28} />
           </div>
-          <div className="exercises__header-text">
-            <h1 className="exercises__title">คลังท่าออกกำลังกาย</h1>
-            <p className="exercises__subtitle">ค้นหาและจัดการรายละเอียดของท่าฝึกที่ใช้ในโปรแกรม</p>
+          <div>
+            <h1 className="ex-header-title">คลังท่าออกกำลังกาย</h1>
+            <p className="ex-header-desc">คุณสามารถเพิ่ม ดู หรือแก้ไขรายละเอียดของท่าต่างๆ ได้ที่นี่</p>
           </div>
         </div>
-        <Button variant="secondary" disabled={loading} onClick={openCreate}>
-          <Plus size={16} />
-          <span>เพิ่มท่าฝึกใหม่</span>
-        </Button>
+        <button className="ex-btn-create" onClick={() => openModal()}>
+          <Plus size={18} /> เพิ่มท่าฝึก
+        </button>
       </div>
 
-      {/* Stats */}
-      <div className="exercises__stats">
-        <Card className="stat-card">
-          <div className="stat-card__header">
-            <span className="stat-card__label">จำนวนท่าฝึก</span>
-            <div className="stat-card__icon stat-card__icon--blue">
-              <Layers size={18} />
-            </div>
-          </div>
-          <div className="stat-card__value">{stats.total}</div>
-          <p className="stat-card__description">ท่าออกกำลังกาย</p>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card className="exercises__filters">
-        <div className="exercises__filters-grid">
-          <div className="filter-group filter-group--search">
-            <label className="filter-label" htmlFor="exercise-search">ค้นหาท่าฝึก</label>
-            <div className="filter-input-wrapper">
-              <Search size={18} className="filter-icon" />
-              <Input
-                id="exercise-search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="ค้นหาจากชื่อท่าฝึก คำอธิบาย หรือกล้ามเนื้อ"
-                className="filter-input"
-                disabled={loading || !!error}
-              />
-            </div>
-          </div>
-
-          <div className="filter-group">
-            <label className="filter-label" htmlFor="exercise-muscle">กล้ามเนื้อเป้าหมาย</label>
-            <div className="filter-select-wrapper">
-              <Filter size={16} className="filter-icon-left" />
-              <select
-                id="exercise-muscle"
-                value={muscleFilter}
-                onChange={(e) => setMuscleFilter(e.target.value)}
-                className="filter-select"
-                disabled={loading || !!error}
-              >
-                {muscleOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="filter-group">
-            <label className="filter-label" htmlFor="exercise-type">ประเภทการกำหนด</label>
-            <select
-              id="exercise-type"
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="filter-select"
-              disabled={loading || !!error}
+      {/* Filter Bar */}
+      <div className="ex-filter-bar">
+        <div className="ex-search-wrap">
+          <Search size={18} className="ex-search-icon" />
+          <input
+            className="ex-search-input"
+            placeholder="ค้นหาชื่อ หรือ กล้ามเนื้อ..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+        <div className="ex-pills">
+          {muscleOptions.slice(0, 7).map(opt => (
+            <button
+              key={opt.value}
+              className={`ex-pill ${muscleFilter === opt.value ? 'active' : ''}`}
+              onClick={() => setMuscleFilter(opt.value)}
             >
-              <option value="all">ทั้งหมด</option>
-              <option value="reps">จำนวนครั้ง</option>
-              <option value="time">เวลา</option>
-            </select>
-          </div>
+              {opt.label}
+            </button>
+          ))}
         </div>
-      </Card>
+        <div className="ex-count">
+          จำนวน {filteredExercises.length} ท่า
+        </div>
+      </div>
 
       {/* Content */}
-      {loading ? (
-        <Card className="exercises__loading">
-          <div className="loading-spinner"></div>
-          <p>กำลังโหลดข้อมูลท่าฝึก...</p>
-        </Card>
-      ) : error ? (
-        <Card className="exercises__error">
-          <p>{error}</p>
-          <Button variant="secondary" onClick={() => window.location.reload()}>
-            ลองใหม่อีกครั้ง
-          </Button>
-        </Card>
-      ) : (
-        <div className="exercises__content">
-          {/* Exercise List */}
-          <div className="exercises__list">
-            <h2 className="exercises__list-title">รายการท่าฝึก ({filteredExercises.length})</h2>
-
-            {filteredExercises.map((exercise) => (
-              <Card
-                key={exercise.id}
-                className={`exercise-item ${exercise.id === selectedExercise?.id ? "exercise-item--active" : ""}`}
-                onClick={() => setSelectedExerciseId(exercise.id)}
-              >
-                <div className="exercise-item__header">
-                  <div className="exercise-item__icon">
-                    <Target size={20} />
-                  </div>
-                  <div className="exercise-item__info">
-                    <h3 className="exercise-item__name">{exercise.name}</h3>
-                    <p className="exercise-item__description">{exercise.description}</p>
-                  </div>
-                  <Badge variant={exercise.type === "reps" ? "success" : "blue"}>
-                    {exercise.type === "reps" ? "นับครั้ง" : "นับเวลา"}
-                  </Badge>
-                </div>
-
-                {exercise.muscles.length > 0 && (
-                  <div className="exercise-item__muscles">
-                    {exercise.muscles.map((muscleKey) => (
-                      <span key={muscleKey} className="exercise-item__muscle">
-                        {muscleLookup[muscleKey] || muscleKey}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </Card>
-            ))}
-
-            {filteredExercises.length === 0 && (
-              <Card className="exercises__empty">
-                <Search size={48} className="exercises__empty-icon" />
-                <p className="exercises__empty-text">ไม่พบข้อมูลท่าฝึกตามเงื่อนไขที่เลือก</p>
-              </Card>
-            )}
-          </div>
-
-          {/* Exercise Details */}
-          {selectedExercise ? (
-            <Card className="exercise-details">
-              <div className="exercise-details__header">
-                <div>
-                  <h2 className="exercise-details__title">รายละเอียดท่าฝึก</h2>
-                  <p className="exercise-details__subtitle">จัดการข้อมูลเพื่อให้การฝึกมีประสิทธิภาพสูงสุด</p>
-                </div>
-                <Badge variant={selectedExercise.type === "reps" ? "success" : "blue"}>
-                  {selectedExercise.type === "reps" ? "นับจำนวนครั้ง" : "นับเวลา"}
-                </Badge>
-              </div>
-
-              <div className="exercise-details__body">
-                <div className="detail-row">
-                  <div className="detail-group">
-                    <label className="detail-label">ชื่อท่าฝึก</label>
-                    <Input value={selectedExercise.name} readOnly />
-                  </div>
-                  <div className="detail-group">
-                    <label className="detail-label">พลังงานที่เผาผลาญ</label>
-                    <div className="detail-value-box">
-                      <Flame size={16} className="detail-icon" />
-                      <span>{selectedExercise.caloriesBurned} แคลอรี</span>
+      {
+        loading ? (
+          <div className="ex-message-box">กำลังโหลดระบบ...</div>
+        ) : error ? (
+          <div className="ex-message-box" style={{ color: "var(--c-red)" }}>{error}</div>
+        ) : filteredExercises.length === 0 ? (
+          <div className="ex-message-box">ไม่พบท่าออกกำลังกายที่้นหา</div>
+        ) : (
+          <div className="ex-grid">
+            {filteredExercises.map(ex => {
+              const coverSrc = resolveImageUrl(ex.image) || 'https://via.placeholder.com/400x160?text=No+Preview';
+              return (
+                <div key={ex.id} className="ex-card" onClick={() => openModal(ex)}>
+                  <div className="ex-card-cover">
+                    <img src={coverSrc} alt="Preview" className="ex-card-image" />
+                    <div className="ex-card-gradient" />
+                    <div className={`ex-badge ${ex.type === 'reps' ? 'reps' : 'time'}`}>
+                      {ex.type === 'reps' ? <CheckCircle2 size={12} /> : <Clock size={12} />}
+                      {ex.type === 'reps' ? 'นับแบบครั้ง' : 'นับแบบเวลา'}
                     </div>
+                    <button className="ex-btn-floating" onClick={(e) => { e.stopPropagation(); openModal(ex); }}>
+                      <Edit2 size={16} />
+                    </button>
                   </div>
-                </div>
 
-                <div className="detail-group">
-                  <label className="detail-label">รายละเอียด</label>
-                  <Textarea value={selectedExercise.description} readOnly rows={3} />
-                </div>
-
-                <div className="detail-group">
-                  <label className="detail-label">คำแนะนำการปฏิบัติ</label>
-                  <Textarea value={selectedExercise.tips} readOnly rows={3} />
-                </div>
-
-                <div className="detail-row">
-                  {selectedExercise.type === "reps" ? (
-                    <div className="detail-group">
-                      <label className="detail-label">จำนวนครั้งที่แนะนำ</label>
-                      <div className="detail-value-box">
-                        <CheckCircle2 size={16} className="detail-icon" />
-                        <span>{selectedExercise.value} ครั้ง</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="detail-group">
-                      <label className="detail-label">ระยะเวลาที่แนะนำ</label>
-                      <div className="detail-value-box">
-                        <Clock size={16} className="detail-icon" />
-                        <span>{selectedExercise.duration} วินาที</span>
-                      </div>
-                    </div>
-                  )}
-                  <div className="detail-group">
-                    <label className="detail-label">ไฟล์วิดีโอ</label>
-                    <Input value={selectedExercise.video} readOnly />
-                  </div>
-                </div>
-
-                <div className="detail-row">
-                  <div className="detail-group">
-                    <label className="detail-label">รูปภาพประกอบ</label>
-                    <Input value={selectedExercise.image} readOnly />
-                    <div className="image-frame">
-                      {selectedExercise?.image ? (
-                        <img
-                          className="image-thumb"
-                          src={resolveImageUrl(selectedExercise.image)}
-                          alt="exercise preview"
-                          onError={(e) => { e.currentTarget.style.display = "none"; }}
-                        />
+                  <div className="ex-card-body">
+                    <h3 className="ex-card-title">{ex.name}</h3>
+                    <div className="ex-card-muscles">
+                      {ex.muscles.length > 0 ? (
+                        ex.muscles.slice(0, 3).map(m => (
+                          <span key={m} className="ex-muscle-tag">{muscleLookup[m] || m}</span>
+                        ))
                       ) : (
-                        <span className="image-placeholder">ไม่มีภาพตัวอย่าง</span>
+                        <span className="ex-muscle-tag" style={{ background: '#f1f5f9', color: '#94a3b8' }}>ไม่มี</span>
                       )}
+                      {ex.muscles.length > 3 && <span className="ex-muscle-tag" style={{ background: '#f1f5f9', color: '#64748b' }}>+{ex.muscles.length - 3}</span>}
+                    </div>
+                    <p className="ex-card-desc">{ex.description || "ไม่มีคำอธิบาย"}</p>
+
+                    <div className="ex-card-stats">
+                      <div className="ex-stat-item">
+                        <span className="ex-stat-val">
+                          {ex.type === 'reps' ? `${ex.value || 0}` : `${ex.duration || 0}s`}
+                        </span>
+                        <span className="ex-stat-label">เป้าหมาย</span>
+                      </div>
+                      <div className="ex-stat-item">
+                        <span className="ex-stat-val"><Flame size={14} color="var(--c-orange)" /> {ex.caloriesBurned || 0}</span>
+                        <span className="ex-stat-label">แคลอรี</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="detail-group">
-                    <label className="detail-label">กล้ามเนื้อเป้าหมาย</label>
-                    <div className="detail-muscles">
-                      {selectedExercise.muscles.map((muscleKey) => (
-                        <Badge key={muscleKey} variant="gray">
-                          {muscleLookup[muscleKey] || muscleKey}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
                 </div>
+              );
+            })}
+          </div>
+        )
+      }
 
-                <div className="detail-actions">
-                  <Button variant="secondary" onClick={() => openEdit(selectedExercise)}>
-                    <Edit2 size={16} />
-                    แก้ไข
-                  </Button>
-                  <Button variant="danger" onClick={requestDelete}>
-                    <Trash2 size={16} />
-                    ลบท่าฝึก
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ) : (
-            <Card className="exercises__no-selection">
-              <Target size={64} className="exercises__no-selection-icon" />
-              <p className="exercises__no-selection-text">เลือกท่าฝึกจากด้านซ้ายเพื่อดูรายละเอียด</p>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {/* ===== Modal: Create/Edit Form ===== */}
-      {formOpen && (
-        <>
-          <div className="modal-backdrop" onClick={() => setFormOpen(false)} />
-          <div className="modal-card">
-            <div className="modal-card__header">
-              <h3>{formMode === "create" ? "เพิ่มท่าฝึกใหม่" : "แก้ไขท่าฝึก"}</h3>
-            </div>
-            <div className="modal-card__body">
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>ชื่อท่าฝึก *</label>
-                  <Input
-                    value={draft.name}
-                    onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-                    placeholder="เช่น Squat, Push-up"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>ประเภท</label>
-                  <select
-                    className="filter-select"
-                    value={draft.type}
-                    onChange={(e) => setDraft((d) => ({ ...d, type: e.target.value }))}
-                  >
-                    <option value="reps">นับจำนวนครั้ง</option>
-                    <option value="time">นับเวลา</option>
-                  </select>
-                </div>
-
-                {draft.type === "reps" ? (
-                  <div className="form-group">
-                    <label>จำนวนครั้งแนะนำ</label>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={draft.value ?? 10}
-                      onChange={(e) => setDraft((d) => ({ ...d, value: Number(e.target.value) }))}
-                    />
-                  </div>
+      {/* Modal View & Edit */}
+      {
+        isModalOpen && draft && (
+          <div className="ex-modal-overlay" onMouseDown={closeModal}>
+            <div className="ex-modal" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="ex-modal-cover">
+                {draft.image ? (
+                  <img src={resolveImageUrl(draft.image)} alt="cov" className="ex-modal-cover-img" />
                 ) : (
-                  <div className="form-group">
-                    <label>เวลาที่แนะนำ (วินาที)</label>
-                    <Input
-                      type="number"
-                      min={5}
-                      value={draft.duration ?? 30}
-                      onChange={(e) => setDraft((d) => ({ ...d, duration: Number(e.target.value) }))}
-                    />
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+                    <ImageIcon size={48} opacity={0.5} />
                   </div>
                 )}
-
-                <div className="form-group">
-                  <label>แคลอรีโดยประมาณ</label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={draft.caloriesBurned}
-                    onChange={(e) => setDraft((d) => ({ ...d, caloriesBurned: Number(e.target.value) }))}
-                    placeholder="เช่น 5"
-                  />
-                </div>
-
-                <div className="form-group form-col-span-2">
-                  <label>รายละเอียด</label>
-                  <Textarea
-                    rows={3}
-                    value={draft.description}
-                    onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
-                    placeholder="อธิบายรายละเอียดการทำท่า"
-                  />
-                </div>
-
-                <div className="form-group form-col-span-2">
-                  <label>คำแนะนำ</label>
-                  <Textarea
-                    rows={3}
-                    value={draft.tips}
-                    onChange={(e) => setDraft((d) => ({ ...d, tips: e.target.value }))}
-                    placeholder="คำแนะนำเพิ่มเติม/ข้อควรระวัง"
-                  />
-                </div>
-
-                {/* วิดีโอ */}
-                <div className="form-group">
-                  <label>วิดีโอ (อัปโหลดจากเครื่องหรือใส่ URL)</label>
-                  <Input
-                    value={draft.video}
-                    onChange={(e) => setDraft((d) => ({ ...d, video: e.target.value }))}
-                    placeholder="/uploads/videos/pushup.mp4 หรือ https://..."
-                  />
-                  <div className="upload-row">
-                    <input
-                      type="file"
-                      accept="video/*"
-                      onChange={onPickVideo}
-                      disabled={uploadingVideo}
-                    />
-                    {uploadingVideo && <small className="upload-hint">กำลังอัปโหลด...</small>}
+                <div className="ex-modal-fade" />
+                <button className="ex-modal-close" onClick={closeModal}><X size={20} /></button>
+                <div className="ex-modal-header-info">
+                  <div>
+                    <h2 className="ex-modal-title">{draft.name || "ท่าออกกำลังกายใหม่"}</h2>
+                    <p className="ex-modal-subtitle">
+                      เผาผลาญ {draft.caloriesBurned || 0} kcal / {draft.type === "reps" ? "รอบ" : "เซ็ต"}
+                    </p>
                   </div>
-                  {draft.video && (
-                    <video
-                      className="video-preview"
-                      src={draft.video}
-                      controls
-                      onError={(e) => { e.currentTarget.style.display = "none"; }}
-                    />
-                  )}
+                  <label className="ex-btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>
+                    <ImageIcon size={14} /> เปลี่ยนภาพ
+                    <input type="file" style={{ display: 'none' }} accept="image/*" onChange={onPickImage} disabled={uploadingImage} />
+                  </label>
                 </div>
+              </div>
 
-                {/* รูปภาพ */}
-                <div className="form-group">
-                  <label>รูปภาพ (อัปโหลดจากเครื่องหรือใส่ URL)</label>
-                  <Input
-                    value={draft.image}
-                    onChange={(e) => setDraft((d) => ({ ...d, image: e.target.value }))}
-                    placeholder="/uploads/images/pushup.jpg หรือ https://..."
-                  />
-                  <div className="upload-row">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={onPickImage}
-                      disabled={uploadingImage}
-                    />
-                    {uploadingImage && <small className="upload-hint">กำลังอัปโหลด...</small>}
-                  </div>
-                  {draft.image && (
-                    <div className="preview-box">
-                      <img
-                        className="preview-img"
-                        src={draft.image}
-                        alt="preview"
-                        onError={(e) => { e.currentTarget.style.display = "none"; }}
-                      />
+              <div className="ex-modal-body">
+                {/* Block 1: Basic Information */}
+                <div>
+                  <h3 className="ex-block-title">ข้อมูลพื้นฐาน</h3>
+                  <div className="ex-form-grid">
+                    <div className="ex-input-group">
+                      <label className="ex-label">ชื่อท่าฝึก</label>
+                      <input className="ex-input" value={draft.name} onChange={(e) => handleFieldChange("name", e.target.value)} placeholder="เช่น Squat" />
                     </div>
-                  )}
+                    <div className="ex-input-group">
+                      <label className="ex-label">รูปแบบการนับ</label>
+                      <select className="ex-input" value={draft.type} onChange={(e) => handleFieldChange("type", e.target.value)}>
+                        <option value="reps">จำนวนครั้ง (Reps)</option>
+                        <option value="time">เวลา (Time)</option>
+                      </select>
+                    </div>
+
+                    {draft.type === "reps" ? (
+                      <div className="ex-input-group">
+                        <label className="ex-label">จำนวนครั้ง</label>
+                        <input type="number" className="ex-input" value={draft.value || ''} onChange={(e) => handleFieldChange("value", Number(e.target.value))} />
+                      </div>
+                    ) : (
+                      <div className="ex-input-group">
+                        <label className="ex-label">เวลา (วินาที)</label>
+                        <input type="number" className="ex-input" value={draft.duration || ''} onChange={(e) => handleFieldChange("duration", Number(e.target.value))} />
+                      </div>
+                    )}
+
+                    <div className="ex-input-group">
+                      <label className="ex-label">แคลอรีเป้าหมาย</label>
+                      <input type="number" className="ex-input" value={draft.caloriesBurned || ''} onChange={(e) => handleFieldChange("caloriesBurned", Number(e.target.value))} />
+                    </div>
+
+                    <div className="ex-input-group ex-form-grid full" style={{ gridColumn: '1 / -1' }}>
+                      <label className="ex-label">รายละเอียด / คำอธิบาย</label>
+                      <textarea className="ex-input" value={draft.description} onChange={(e) => handleFieldChange("description", e.target.value)} placeholder="วิธีการทำท่าออกกำลังกายเบื้องต้น" />
+                    </div>
+
+                    <div className="ex-input-group ex-form-grid full" style={{ gridColumn: '1 / -1' }}>
+                      <label className="ex-label">จุดที่ต้องระวัง (Tips)</label>
+                      <textarea className="ex-input" value={draft.tips} onChange={(e) => handleFieldChange("tips", e.target.value)} placeholder="เช่น ระวังหลังงอเกร็งหน้าท้อง" />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="form-group form-col-span-2">
-                  <label>กล้ามเนื้อเป้าหมาย</label>
-                  <div className="muscle-checkboxes">
-                    {muscleOptions
-                      .filter((m) => m.value !== "all")
-                      .map((m) => {
-                        const checked = draft.muscles.includes(m.value);
-                        return (
-                          <label key={m.value} className="checkbox-chip">
+                {/* Block 2: Muscles & Media */}
+                <div>
+                  <h3 className="ex-block-title">กล้ามเนื้อ & สื่อประกอบ</h3>
+                  <div className="ex-form-grid full">
+
+                    <div className="ex-input-group">
+                      <label className="ex-label">กล้ามเนื้อที่มีส่วนร่วม (เลือกได้หลายส่วน)</label>
+                      <div className="ex-muscle-checks">
+                        {muscleOptions.filter(m => m.value !== 'all').map(opt => (
+                          <label key={opt.value} className="ex-check-chip">
                             <input
                               type="checkbox"
-                              checked={checked}
-                              onChange={(e) => {
-                                setDraft((d) => {
-                                  const set = new Set(d.muscles);
-                                  if (e.target.checked) set.add(m.value);
-                                  else set.delete(m.value);
-                                  return { ...d, muscles: Array.from(set) };
-                                });
-                              }}
+                              checked={(draft.muscles || []).includes(opt.value)}
+                              onChange={(e) => handleCheckbox(opt.value, e.target.checked)}
                             />
-                            <span>{m.label}</span>
+                            {opt.label}
                           </label>
-                        );
-                      })}
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="ex-input-group" style={{ marginTop: '0.5rem' }}>
+                      <label className="ex-label">วิดีโอสาธิต (ลิงก์ หรือ อัปโหลด)</label>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input className="ex-input" style={{ flex: 1 }} value={draft.video || ''} onChange={(e) => handleFieldChange("video", e.target.value)} placeholder="URL วิดีโอ หรืออัปโหลดทางขวา" />
+                        <label className="ex-btn-secondary" style={{ whiteSpace: 'nowrap' }}>
+                          <PlaySquare size={16} /> {uploadingVideo ? "Uploading..." : "อัปโหลด"}
+                          <input type="file" style={{ display: 'none' }} accept="video/*" onChange={onPickVideo} disabled={uploadingVideo} />
+                        </label>
+                      </div>
+                    </div>
+
                   </div>
                 </div>
+
+                {/* Footer Actions */}
+                <div className="ex-modal-footer">
+                  {draft.id && !draft.id.startsWith("draft-") && (
+                    <button className="ex-btn-danger" style={{ marginRight: 'auto' }} onClick={handleDelete}>
+                      <Trash2 size={16} /> ลบท่าออกกำลังกาย
+                    </button>
+                  )}
+                  <button className="ex-btn-secondary" onClick={closeModal}>ยกเลิก</button>
+                  <button className="ex-btn-save" onClick={handleSave}><Save size={16} /> บันทึกการเปลี่ยนแปลง</button>
+                </div>
+
               </div>
             </div>
-            <div className="modal-card__footer">
-              <Button onClick={handleSave}>
-                <Save size={16} />
-                บันทึก
-              </Button>
-              <Button variant="secondary" onClick={() => setFormOpen(false)}>
-                <XCircle size={16} />
-                ยกเลิก
-              </Button>
-            </div>
           </div>
-        </>
-      )}
-
-      {/* ===== Confirm Delete ===== */}
-      {confirmOpen && (
-        <>
-          <div className="modal-backdrop" onClick={() => setConfirmOpen(false)} />
-          <div className="modal-card modal-card--sm">
-            <div className="modal-card__header">
-              <h3>ยืนยันการลบ</h3>
-            </div>
-            <div className="modal-card__body">
-              <p>คุณต้องการลบท่าฝึก “{selectedExercise?.name}” ออกจากคลังหรือไม่?</p>
-            </div>
-            <div className="modal-card__footer">
-              <Button variant="danger" onClick={handleDelete}>
-                <Trash2 size={16} />
-                ลบ
-              </Button>
-              <Button variant="secondary" onClick={() => setConfirmOpen(false)}>
-                ยกเลิก
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* ===== Center Notice Card Box ===== */}
-      {notice.open && (
-        <>
-          <div className="notice-backdrop" onClick={closeNotice} />
-        <div className={`notice-card ${notice.type === "error" ? "notice-card--error" : "notice-card--success"}`}>
-            <div className="notice-card__icon">
-              {notice.type === "error" ? <XCircle size={28} /> : <CheckCircle size={28} />}
-            </div>
-            <div className="notice-card__content">
-              <h4 className="notice-card__title">{notice.title}</h4>
-              <p className="notice-card__message">{notice.message}</p>
-            </div>
-            <div>
-              <Button variant="secondary" onClick={closeNotice}>ปิด</Button>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }
